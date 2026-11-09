@@ -1,0 +1,139 @@
+/**
+ * Copyright (c) 2012 Partners In Health.  All rights reserved.
+ * The use and distribution terms for this software are covered by the
+ * Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+ * which can be found in the file epl-v10.html at the root of this distribution.
+ * By using this software in any fashion, you are agreeing to be bound by
+ * the terms of this license.
+ * You must not remove this notice, or any other, from this software.
+ **/
+package org.pih.warehouse.importer
+
+import grails.gorm.transactions.Transactional
+import org.pih.warehouse.core.Constants
+import org.pih.warehouse.core.Person
+import org.pih.warehouse.data.PersonService
+import org.pih.warehouse.order.Order
+import org.pih.warehouse.order.OrderItem
+import org.pih.warehouse.order.OrderService
+import org.pih.warehouse.product.Product
+import org.apache.commons.lang.StringUtils
+
+
+@Transactional
+class PurchaseOrderActualReadyDateImportDataService implements ImportDataService {
+    OrderService orderService
+    PersonService personService
+
+    @Override
+    void validateData(ImportDataCommand command) {
+        log.info "Validate data ${command.filename}"
+
+        command.data.eachWithIndex { params, index ->
+            Order order
+            OrderItem orderItem
+            Product product
+
+            // Product validation
+            if (!params["productCode"]) {
+                command.errors.reject("Row ${index + 1}: 'productCode' is required")
+            }
+            if (params["productCode"]) {
+                product = Product.findByProductCode(params["productCode"])
+                if (!product) {
+                    command.errors.reject("Row ${index + 1}: product with code '${params["productCode"]}' does not exists")
+                }
+            }
+
+            // Order Number validation
+            if (!params["orderNumber"]) {
+                command.errors.reject("Row ${index + 1}: 'orderNumber' is required")
+            }
+            if (params["orderNumber"]) {
+                order = Order.findByOrderNumber(params["orderNumber"])
+                if (!order) {
+                    command.errors.reject("Row ${index + 1}: order with Order Number '${params["orderNumber"]}' does not exists")
+                }
+            }
+
+            // Order item validation
+            if (params["orderItemId"]) {
+                orderItem = OrderItem.get(params['orderItemId'])
+                if (!orderItem) {
+                    command.errors.reject("Row ${index + 1}: order item with id '${params["orderItemId"]}' does not exists")
+                }
+            }
+
+            if (!params["orderItemId"] && order && product) {
+                List<OrderItem> matchedOrderItems = OrderItem.findAllByOrderAndProduct(order, product)
+                if (matchedOrderItems.size() > 1) {
+                    command.errors.reject("""
+                        Row ${index + 1}: there are multiple order items with product '${product.productCode}' on order ${order.id}.
+                        To differentiate between multiple order items sharing the same product within the same order, please include the order item id to each entry.
+                    """)
+                }
+                if (!matchedOrderItems) {
+                    command.errors.reject("Row ${index + 1}: Order Item with product ${params["productCode"]} does not exist on order '${params["orderNumber"]}'")
+                }
+                if (matchedOrderItems.size() == 1) {
+                    orderItem = matchedOrderItems.first();
+                }
+            }
+
+            // Validate that order matches order item
+            if (orderItem && order && orderItem.order.id != order.id) {
+                command.errors.reject("Row ${index + 1}: Order Number '${params["orderNumber"]}' is incorrect for order item ${orderItem.id}")
+            }
+
+            // Validate that product matches order item
+            if (orderItem && product && orderItem.product.id != product.id) {
+                command.errors.reject("Row ${index + 1}: Product code '${params["productCode"]}' is incorrect for order item ${orderItem.id}")
+            }
+
+            String recipientValue = params["recipient"]
+            if (!StringUtils.isBlank(recipientValue)) {
+                Person recipient = personService.getActivePerson(recipientValue)
+                if (!recipient) {
+                    command.errors.reject("Row ${index + 1}: Recipient ${recipientValue} does not exist in OpenBoxes. Please check your data")
+                }
+            }
+        }
+    }
+
+    @Override
+    void importData(ImportDataCommand command) {
+        log.info "Import data ${command.filename}"
+
+        command.data.each { params ->
+
+            OrderItem orderItem = params['orderItemId'] ? OrderItem.get(params['orderItemId']) : null
+
+            if (!orderItem) {
+                orderItem = orderService.getOrderItemByOrderAndProduct(params['orderNumber'], params['productCode'])
+            }
+
+            if (!orderItem) {
+                throw new IllegalArgumentException("Order Item is not found")
+            }
+
+            // Normally leaving a blank in a cell would would result in that field being set to null on the object.
+            // However, this import does not have a "download data" option (at PIH we source the data from an external
+            // PowerBI report). Because of this, it is more user friendly for blank cells to simply do nothing.
+
+            Date actualReadyDate = params["actualReadyDate"] as Date
+            if (actualReadyDate) {
+                orderItem.actualReadyDate = actualReadyDate
+            }
+
+            String recipientValue = params["recipient"]
+            if (!StringUtils.isBlank(recipientValue)) {
+                Person recipient = personService.getActivePerson(recipientValue)
+                if (recipient) {
+                    orderItem.recipient = recipient
+                }
+            }
+
+            orderItem.save(failOnError: true)
+        }
+    }
+}

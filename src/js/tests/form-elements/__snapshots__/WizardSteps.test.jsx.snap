@@ -1,0 +1,107 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`WizardSteps renders correctly 1`] = `
+<div
+  className="steps-main-box"
+>
+  <div
+    className="steps-inside-wrapper"
+  >
+    <div
+      className="step-container "
+      data-stepstate="inactive"
+      data-testid="wizard-step"
+    >
+      <div
+        className="circle"
+        disabled={true}
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex="0"
+      />
+      <div
+        className="step-name"
+      >
+        Create
+      </div>
+    </div>
+    <div
+      className="step-container active"
+      data-stepstate="active"
+      data-testid="wizard-step"
+    >
+      <div
+        className="circle"
+        disabled={true}
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex="0"
+      />
+      <div
+        className="step-name"
+      >
+        Add items
+      </div>
+    </div>
+    <div
+      className="step-container "
+      data-stepstate="inactive"
+      data-testid="wizard-step"
+    >
+      <div
+        className="circle"
+        disabled={true}
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex="0"
+      />
+      <div
+        className="step-name"
+      >
+        Edit
+      </div>
+    </div>
+    <div
+      className="step-container "
+      data-stepstate="inactive"
+      data-testid="wizard-step"
+    >
+      <div
+        className="circle"
+        disabled={true}
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex="0"
+      />
+      <div
+        className="step-name"
+      >
+        Pick
+      </div>
+    </div>
+    <div
+      className="step-container "
+      data-stepstate="inactive"
+      data-testid="wizard-step"
+    >
+      <div
+        className="circle"
+        disabled={true}
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex="0"
+      />
+      <div
+        className="step-name"
+      >
+        Send
+      </div>
+    </div>
+  </div>
+</div>
+`;

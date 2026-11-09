@@ -1,0 +1,97 @@
+package org.pih.warehouse.core.date
+
+import java.time.ZoneId
+
+import org.pih.warehouse.core.formatter.FormatterContext
+
+/**
+ * Context object containing the configuration fields for formatting dates.
+ * For a majority of cases the default settings can be used and so this context object will not be required.
+ */
+class DateFormatterContext extends FormatterContext {
+
+    /**
+     * Overrides the locale to use when formatting the date.
+     * Needed for day (ex: eeee -> Monday) and month (ex: MMM -> Jan) fields.
+     */
+    Locale localeOverride
+
+    /**
+     * Overrides the pattern to use when formatting the date.
+     * Unlike displayStyleOverride, the pattern itself is not localized.
+     * Will take priority over displayStyleOverride.
+     */
+    String patternOverride
+
+    /**
+     * Overrides the timezone to use when formatting the date.
+     */
+    ZoneId timezoneOverride
+
+    /**
+     * The format that the date will be displayed in.
+     * Needed so that we can support different date patterns for each format.
+     */
+    DateDisplayFormat displayFormat
+
+    /**
+     * Overrides the localized pattern (whereas patternOverride is not locale-specific) to format the date to.
+     * If patternOverride is also set, it will take priority over this field.
+     */
+    DateDisplayStyle displayStyleOverride
+
+    static DateFormatterContextBuilder builder() {
+        return new DateFormatterContextBuilder()
+    }
+
+    DateFormatterContext validate() {
+        int numFormatOverrides = (patternOverride != null ? 1 : 0) +
+                (displayFormat != null ? 1 : 0) +
+                (displayStyleOverride != null ? 1 : 0)
+        if (numFormatOverrides > 1) {
+            throw new IllegalArgumentException(
+                    'One (and only one) of the following fields must be set when formatting a date: patternOverride, ' +
+                            'displayFormat, displayStyleOverride')
+        }
+        return this
+    }
+
+    private static class DateFormatterContextBuilder {
+
+        DateFormatterContext context = new DateFormatterContext()
+
+        DateFormatterContext build() {
+            return context.validate()
+        }
+
+        DateFormatterContextBuilder withLocaleOverride(Locale localeOverride) {
+            context.localeOverride = localeOverride
+            return this
+        }
+
+        DateFormatterContextBuilder withPatternOverride(String patternOverride) {
+            context.patternOverride = patternOverride
+            return this
+        }
+
+        DateFormatterContextBuilder withTimezoneOverride(ZoneId timezoneOverride) {
+            context.timezoneOverride = timezoneOverride
+            return this
+        }
+
+        DateFormatterContextBuilder withDisplayFormat(DateDisplayFormat displayFormat) {
+            context.displayFormat = displayFormat
+            return this
+        }
+
+        DateFormatterContextBuilder withDisplayStyleOverride(DateDisplayStyle displayStyleOverride) {
+            context.displayStyleOverride = displayStyleOverride
+            return this
+        }
+
+        DateFormatterContextBuilder withDefaultValue(String defaultValue) {
+            context.defaultValue = defaultValue
+            return this
+        }
+    }
+}

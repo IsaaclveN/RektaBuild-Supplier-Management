@@ -1,0 +1,34 @@
+import { useState } from 'react';
+
+import useTablePagination from 'hooks/useTablePagination';
+
+const useCycleCountPagination = ({
+  filterParams,
+  setShouldFetch,
+  defaultPageSize = 5,
+}) => {
+  const [totalCount, setTotalCount] = useState(0);
+  const {
+    paginationProps,
+    offset,
+    pageSize,
+    serializedParams,
+    setSerializedParams,
+  } = useTablePagination({
+    defaultPageSize,
+    totalCount,
+    filterParams,
+    setShouldFetch,
+  });
+
+  return {
+    paginationProps,
+    offset,
+    pageSize,
+    setTotalCount,
+    serializedParams,
+    setSerializedParams,
+  };
+};
+
+export default useCycleCountPagination;

@@ -1,0 +1,17 @@
+# For running the app against a non-containerized database that is running directly on the host machine
+services:
+    app:
+      extends: 
+        file: docker-compose-base.yml
+        service: app
+      environment:
+        DATASOURCE_URL: ${DATASOURCE_URL:-jdbc:mysql://host.docker.internal:3306/openboxes?serverTimezone=UTC&useSSL=false}
+      extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    nginx:
+      extends: 
+        file: docker-compose-base.yml
+        service: nginx
+      depends_on:
+          - app

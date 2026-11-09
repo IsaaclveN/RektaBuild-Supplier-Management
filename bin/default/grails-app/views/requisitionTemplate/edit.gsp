@@ -1,0 +1,531 @@
+<%@ page import="org.pih.warehouse.requisition.RequisitionItemSortByCode; grails.converters.JSON; org.pih.warehouse.core.RoleType"%>
+<%@ page import="org.pih.warehouse.requisition.RequisitionType"%>
+<%@ page import="org.pih.warehouse.requisition.ReplenishmentTypeCode"%>
+<%@ page contentType="text/html;charset=UTF-8"%>
+<html>
+<head>
+    <meta name="layout" content="custom" />
+    <g:set var="entityName" value="${warehouse.message(code: 'requisition.label', default: 'Requisition')}" />
+    <title><warehouse:message code="${requisition?.id ? 'default.edit.label' : 'default.create.label'}" args="[entityName]" /></title>
+    <link rel="stylesheet" href="${resource(dir:'js/jquery.tagsinput/',file:'jquery.tagsinput.css')}" type="text/css" media="screen, projection" />
+    <script src="${resource(dir:'js/jquery.tagsinput/', file:'jquery.tagsinput.js')}" type="text/javascript" ></script>
+    <style>
+    .sortable { list-style-type: none; margin: 0; padding: 0; width: 100%; }
+    .sortable tr { margin: 0 5px 5px 5px; padding: 5px; font-size: 1.2em; height: 1.5em; }
+    html>body .sortable li { height: 1.5em; line-height: 1.2em; }
+    .ui-state-highlight { height: 1.5em; line-height: 1.2em; }
+    /*
+      There are two classes indicating errors, to avoid clearing error highlights from the table when user changes
+      product selection in the new line. line-error class is for existing lines with duplicated products,
+      and new-line-error is for the new line with duplicated product selection.
+    */
+    .line-error, .new-line-error { background-color: rgba(255, 0, 0, 0.31) !important; }
+    #add-requisition-item:disabled { cursor: not-allowed;}
+    </style>
+</head>
+<body>
+
+<g:if test="${flash.message}">
+    <div class="message">${flash.message}</div>
+</g:if>
+<g:if test="${flash.error}">
+    <div class="errors">${flash.error}</div>
+</g:if>
+<g:hasErrors bean="${requisition}">
+    <div class="errors">
+        <g:renderErrors bean="${requisition}" as="list" />
+    </div>
+</g:hasErrors>
+
+<div id="success-messages"></div>
+<div id="error-messages" ></div>
+
+<g:render template="summary" model="[requisition:requisition]"/>
+
+<div class="yui-gf">
+    <div class="yui-u first">
+        <g:render template="header" model="[requisition:requisition]"/>
+
+    </div>
+    <div class="yui-u">
+        <div class="box">
+            <h2>
+                ${warehouse.message(code:'requisitionTemplate.requisitionItems.label')}
+            </h2>
+
+                <g:hiddenField name="id" value="${requisition.id}"/>
+                <g:hiddenField name="version" value="${requisition.version}"/>
+                <g:hiddenField id="replenishmentTypeCode" name="replenishmentTypeCode" value="${requisition.replenishmentTypeCode}"/>
+                <g:hiddenField id="pullType" name="pullType" value="${ReplenishmentTypeCode.PULL}"/>
+
+                <div>
+                    <table class="sortable dataTable" data-update-url="${createLink(controller:'json', action:'sortRequisitionItems')}">
+                        <thead>
+                            <g:if test="${requisition.replenishmentTypeCode == ReplenishmentTypeCode.PULL}">
+                                <tr>
+                                    <th class="center">
+                                        <warehouse:message code="product.productCode.label" default="#"/>
+                                    </th>
+                                    <th>
+                                        <warehouse:message code="product.label"/>
+                                    </th>
+                                    <th>
+                                        <warehouse:message code="category.label"/>
+                                    </th>
+                                    <th class="center">
+                                        <warehouse:message code="unitOfMeasure.label"/>
+                                    </th>
+                                    <g:hasRoleFinance>
+                                        <th id="finance" class="center">
+                                            <warehouse:message code="requisitionTemplate.unitCost.label"/>
+                                        </th>
+                                    </g:hasRoleFinance>
+                                    <g:isUserAdmin>
+                                        <th id="actions">
+                                            <warehouse:message code="default.actions.label"/>
+                                        </th>
+                                    </g:isUserAdmin>
+                                </tr>
+                            </g:if>
+                            <g:else>
+                                <tr>
+                                    <th class="center">
+                                        <warehouse:message code="product.productCode.label" default="#"/>
+                                    </th>
+                                    <th>
+                                        <warehouse:message code="product.label"/>
+                                    </th>
+                                    <th>
+                                        <warehouse:message code="category.label"/>
+                                    </th>
+                                    <th class="center">
+                                        <warehouse:message code="requisitionTemplate.maxQuantity.label"/>
+                                    </th>
+                                    <th class="center">
+                                        <warehouse:message code="unitOfMeasure.label"/>
+                                    </th>
+                                    <th class="center">
+                                        <warehouse:message code="requisitionTemplate.monthlyQuantity.label"/>
+                                    </th>
+                                    <g:hasRoleFinance>
+                                        <th id="finance" class="center">
+                                            <warehouse:message code="requisitionTemplate.unitCost.label"/>
+                                        </th>
+                                        <th class="center">
+                                            <warehouse:message code="requisitionTemplate.totalCost.label"/>
+                                        </th>
+                                    </g:hasRoleFinance>
+                                    <g:isUserAdmin>
+                                        <th id="actions">
+                                            <warehouse:message code="default.actions.label"/>
+                                        </th>
+                                    </g:isUserAdmin>
+                                </tr>
+                            </g:else>
+                        </thead>
+                        <tbody>
+
+                        </tbody>
+                        <tfoot>
+                            <g:isUserAdmin>
+                                <tr class="prop" id="new-row">
+                                    <g:if test="${requisition.replenishmentTypeCode == ReplenishmentTypeCode.PULL}">
+                                        <td></td>
+                                        <td>
+                                            <g:autoSuggest id="product"
+                                                           name="product"
+                                                           jsonUrl="${request.contextPath }/json/findProductByName?skipQuantity=true"
+                                                           width="100%"
+                                                           styleClass="text"
+                                                           showColor="true"/>
+                                        </td>
+                                        <td></td>
+                                        <td class="center">
+                                            <g:select name="unitOfMeasure"
+                                                      class="chzn-select-deselect"
+                                                      from="['EA/1']"/>
+                                        </td>
+                                        <g:hasRoleFinance>
+                                            <td></td>
+                                        </g:hasRoleFinance>
+                                    </g:if>
+                                    <g:else>
+                                        <td></td>
+                                        <td>
+                                            <g:autoSuggest id="product"
+                                                           name="product"
+                                                           jsonUrl="${request.contextPath }/json/findProductByName?skipQuantity=true"
+                                                           width="100%"
+                                                           styleClass="text"
+                                                           showColor="true"/>
+                                        </td>
+                                        <td></td>
+                                        <td class="center">
+                                            <g:textField name="quantity" value="" class="text" size="6"/>
+                                        </td>
+                                        <td class="center">
+                                            <g:select name="unitOfMeasure"
+                                                      class="chzn-select-deselect"
+                                                      from="['EA/1']"/>
+                                        </td>
+                                        <td></td>
+                                        <g:hasRoleFinance>
+                                            <td></td>
+                                            <td></td>
+                                        </g:hasRoleFinance>
+                                    </g:else>
+                                    <td>
+                                        <button class="button icon add" id="add-requisition-item">
+                                            <warehouse:message code="default.button.add.label"/>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </g:isUserAdmin>
+                            <tr>
+                                <td colspan="${requisition.replenishmentTypeCode == ReplenishmentTypeCode.PUSH || !requisition.replenishmentTypeCode ? 9 : 6}">
+                                    <div class="buttons">
+                                        <button id="update-requisition" class="button" name="save">
+                                            <img src="${resource(dir:'images/icons/silk',file:'accept.png')}" />&nbsp;
+                                            ${warehouse.message(code:'default.button.save.label', default: 'Save') }
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+        </div>
+    </div>
+</div>
+<script>
+  function getDuplicateProductIndexes(table, productId) {
+    const data = table.fnGetData();
+
+    return data.reduce((duplicates, currentRow, index) => {
+      if (currentRow?.product?.id === productId) {
+        return [...duplicates, index];
+      }
+      return duplicates;
+    }, [])
+  }
+
+  function validate(table) {
+    const selectedProductId = $("#product-id").val();
+    const addButton = $("#add-requisition-item");
+
+    $(table.fnGetNodes()).removeClass('new-line-error');
+
+    if (!selectedProductId) {
+      $("#new-row").removeClass("new-line-error");
+      addButton.prop("disabled", false);
+      addButton.prop("title", "");
+      return;
+    }
+
+    const duplicates = getDuplicateProductIndexes(table, selectedProductId);
+
+    if (duplicates.length > 0) {
+      $("#new-row").addClass("new-line-error");
+      addButton.prop("disabled", true);
+      addButton.prop(
+        "title",
+        "${g.message(code: 'requisitionTemplate.duplicatedLine.error.label', default: 'Item already exists in the stocklist')}"
+      );
+
+      duplicates.forEach(index => {
+        $(table.fnGetNodes()[index]).addClass('new-line-error');
+      });
+    } else {
+      $("#new-row").removeClass("new-line-error");
+      addButton.prop("disabled", false);
+      addButton.prop("title", "");
+    }
+  }
+
+    $(document).ready(function() {
+        var columns = [];
+        const replenishmentType = $("#replenishmentTypeCode").val();
+        const pullType = $("#pullType").val();
+
+      // When user selects product in the dropdown, we want to check if this product already exists in the table.
+      // If it does, we will display error message and highlight all lines with duplicated product.
+      // When user changes selection, we want to remove error message and highlights from previously duplicated lines.
+      $("#product-id").on("change", function () {
+        validate(table);
+      });
+
+        if (replenishmentType == pullType) {
+            columns = [
+                { "mData": "product.productCode" },
+                { "mData": "product.name" },
+                { "mData": "product.category" },
+                { "mData": "productPackageId" },
+            ];
+            if ($("#finance").length) {
+                columns.push({ "mData": "product.pricePerUnit" });
+            }
+        } else {
+            columns = [
+                { "mData": "product.productCode" },
+                { "mData": "product.name" },
+                { "mData": "product.category" },
+                { "mData": "quantity" },
+                { "mData": "productPackageId" },
+                { "mData": "monthlyDemand" }
+                ];
+            if ($("#finance").length) {
+                columns.push({ "mData": "product.pricePerUnit" });
+                columns.push({ "mData": "totalCost" });
+            }
+        }
+
+        if ($("#actions").length) {
+            columns.push({ "mData": "id", "bSortable": false });
+        }
+
+        var table = $(".dataTable").dataTable({
+            "bProcessing": true,
+            "sServerMethod": "GET",
+            "bSearch": false,
+            "bScrollCollapse": true,
+            "bJQueryUI": true,
+            "bAutoWidth": true,
+            "aaSorting": [],
+            "sPaginationType": "full_numbers",
+            "sAjaxSource": "${request.contextPath}/json/getRequisitionItems/" + $("#id").val(),
+            "fnServerData": function ( sSource, aoData, fnCallback ) {
+                $.ajax({
+                    "dataType": 'json',
+                    "type": "GET",
+                    "url": sSource,
+                    "data": aoData,
+                    "success": fnCallback,
+                    "timeout": 10000,   // optional if you want to handle timeouts (which you should)
+                    "error": handleAjaxError // this sets up jQuery to give me errors
+                });
+            },
+            "oLanguage": {
+                "sZeroRecords": "No records found",
+                "sProcessing": "Loading ... <img alt='spinner' src=\"${resource(dir: 'images', file: 'spinner.gif')}\" />"
+            },
+            "iDisplayLength" : -1,
+            "aLengthMenu": [
+                [5, 10, 25, 100, 1000, -1],
+                [5, 10, 25, 100, 1000, "All"]
+            ],
+            "aoColumns": columns,
+            "bUseRendered": false,
+            "fnRowCallback": function( nRow, aData) {
+              const isDuplicate = getDuplicateProductIndexes(table, aData?.product?.id).length > 1;
+              // Displaying error for duplicated products that are currently in the table.
+              // This can happen when user saved invalid line before that validation existed
+              if (isDuplicate) {
+                $(nRow).addClass('line-error');
+              } else {
+                $(nRow).removeClass('line-error');
+              }
+
+                // If product is inactive, the row should be gray and have a tooltip with an information
+                if (!aData.product?.active) {
+                  $(nRow)
+                    .addClass('grayed')
+                    .attr('title', `${g.message(code: 'requisitionTemplate.product.inactive.tooltip.label', default: 'This product has been discontinued. Please remove it from the stock list')}`)
+                }
+
+                var selectPackage = $('<select/>', {
+                    id: 'productPackage-' + aData["id"]
+                });
+                selectPackage.css('width', '100%');
+
+                selectPackage.append($("<option>").attr('value', null).text('EA/1'));
+                $(aData["product"].packages).each(function() {
+                    selectPackage.append($("<option>", { value: this.id, selected: this.id === aData["productPackageId"] }).text(this.uom.code + "/" + this.quantity + " -- " + this.uom.name));
+                });
+
+                var deleteButton = $('<button/>', {
+                    text: "${warehouse.message(code:'default.button.delete.label')}",
+                    id: 'delete-' + aData["id"],
+                    type: 'button',
+                    class: 'button icon trash',
+                    style: 'min-width: 70px',
+                    click: function (event) {
+                        event.preventDefault();
+
+                        $.ajax({
+                            url: "${request.contextPath}/json/removeRequisitionItem/" + aData["id"],
+                            type: "delete",
+                            contentType: 'text/json',
+                            dataType: "json",
+                            success: function() {
+                                table.fnDeleteRow(nRow);
+                                validate(table);
+                            },
+                            error: handleAjaxError
+                        });
+                    }
+                });
+
+                if (replenishmentType == pullType) {
+                    $('td:eq(0)', nRow).addClass('center middle').css('color', aData["product"].color);
+                    $('td:eq(1)', nRow).addClass('middle');
+                    $('td:eq(1)', nRow).html('<a style="color: ' + aData["product"].color +
+                        '" href="${request.contextPath}/inventoryItem/showStockCard/' + aData["product"].id + '" target="_blank">' + (aData["product"].displayName ?? aData["product"].name) + '</a>');
+                    // If we display DISPLAY_NAME, we want to have tooltip with original name of the product
+                    if (aData?.product?.displayName) {
+                      $('td:eq(1)', nRow).attr('title', aData?.product?.name);
+                    }
+                    $('td:eq(2)', nRow).addClass('middle dont-break-out');
+                    $('td:eq(3)', nRow).addClass('center middle');
+                    $('td:eq(3)', nRow).html(selectPackage);
+                    if ($("#finance").length) {
+                        $('td:eq(4)', nRow).html(Number(aData["product"].pricePerUnit).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " ${grailsApplication.config.openboxes.locale.defaultCurrencyCode}");
+                    }
+                    if ($("#actions").length) {
+                        if ($("#finance").length) {
+                            $('td:eq(5)', nRow).html(deleteButton);
+                        } else {
+                            $('td:eq(4)', nRow).html(deleteButton);
+                        }
+                    }
+                } else {
+                    $('td:eq(0)', nRow).addClass('center middle').css('color', aData["product"].color);
+                    $('td:eq(1)', nRow).addClass('middle');
+                    $('td:eq(1)', nRow).html('<a style="color: ' + aData["product"].color +
+                        '" href="${request.contextPath}/inventoryItem/showStockCard/' + aData["product"].id + '" target="_blank">' + (aData["product"].displayName ?? aData["product"].name) + '</a>');
+                    // If we display DISPLAY_NAME, we want to have tooltip with original name of the product
+                    if (aData?.product?.displayName) {
+                      $('td:eq(1)', nRow).attr('title', aData?.product?.name);
+                    }
+                    $('td:eq(2)', nRow).addClass('middle dont-break-out');
+                    $('td:eq(3)', nRow).addClass('center');
+                    $('td:eq(3)', nRow).html('<input class="text" id="quantity-' + aData["id"] + '" size="6" value=' + aData["quantity"] + ' />');
+                    $('td:eq(4)', nRow).addClass('center middle');
+                    $('td:eq(4)', nRow).html(selectPackage);
+                    $('td:eq(5)', nRow).addClass('center middle');
+                    if (aData["monthlyDemand"] === null) {
+                        $('td:eq(5)', nRow).html("${warehouse.message(code: 'requisitionTemplate.noReplenishmentPeriod.message')}");
+                    } else {
+                        $('td:eq(5)', nRow).html(aData["monthlyDemand"] + aData["product"].unitOfMeasure ? aData["product"].unitOfMeasure : "${warehouse.message(code:'default.each.label')}");
+                    }
+                    if ($("#finance").length) {
+                        $('td:eq(6)', nRow).html(Number(aData["product"].pricePerUnit).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " ${grailsApplication.config.openboxes.locale.defaultCurrencyCode}");
+                        $('td:eq(7)', nRow).html(Number(aData["totalCost"]).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " ${grailsApplication.config.openboxes.locale.defaultCurrencyCode}");
+                    }
+                    if ($("#actions").length) {
+                        if ($("#finance").length) {
+                            $('td:eq(8)', nRow).html(deleteButton);
+                        } else {
+                            $('td:eq(6)', nRow).html(deleteButton);
+                        }
+                    }
+                }
+
+                return nRow;
+            }
+        });
+
+        $("#product-suggest").focus();
+        $("#add-requisition-item").click(function(event) {
+            event.preventDefault();
+            var productId = $("#product-id").val();
+            var requisitionId = $("#id").val();
+            var quantity = $("#quantity").val();
+            var orderIndex = table.fnGetData().length;
+
+            if (productId) {
+                var params = { "product.id": productId, "requisition.id": requisitionId, "orderIndex": orderIndex };
+                if (replenishmentType == pullType) {
+                    params.quantity = 0;
+                } else if (quantity) {
+                    params.quantity = quantity;
+                } else {
+                  return;
+                }
+
+                $.ajax({
+                    url: "${request.contextPath}/json/addToRequisitionItems",
+                    type: "get",
+                    contentType: 'text/json',
+                    dataType: "json",
+                    data: params,
+                    success: function(data) {
+                        table.fnAddData(data.data);
+                        $("#product-id").val('');
+                        $("#product-suggest").val('');
+                        if (replenishmentType != pullType) {
+                            $("#quantity").val('');
+                        }
+                    },
+                    error: handleAjaxError
+                });
+            }
+        });
+
+        $("#update-requisition").click(function(event) {
+            event.preventDefault();
+            var requisitionId = $("#id").val();
+            var data = [];
+            $(table.fnGetData()).each(function() {
+                var id = this.id;
+
+                var quantityInput = $('#quantity-' + id);
+                var packageSelect = $('#productPackage-' + id);
+
+                if (quantityInput.length && packageSelect.length) {
+                    data.push({ id: id, quantity: quantityInput.val(), productPackageId: packageSelect.val() || '' })
+                }
+            });
+
+            $.ajax({
+                url: "${request.contextPath}/json/updateRequisitionItems/" + requisitionId,
+                type: "post",
+                contentType: 'application/json',
+                dataType: "json",
+                data: JSON.stringify({ items: data }),
+                success: function() {
+                    $("#success-messages").html('<div class="message">${warehouse.message(code: 'default.updated.message', args: [warehouse.message(code: 'requisition.label', default: 'Requisition')])}</div>');
+                },
+                error: handleAjaxError
+            });
+        });
+
+        $("#selectAllProducts").click(function(event) {
+            var checked = ($(this).attr("checked") == 'checked');
+            $("input.select-product[type='checkbox']").attr("checked", checked);
+        });
+
+        $('#productCodesInput').tagsInput({
+            'autocomplete_url':'${createLink(controller: 'json', action: 'findProductCodes')}',
+            'defaultText': '...',
+            'width': 'auto',
+            'height': 'auto',
+            'removeWithBackspace' : true
+        });
+    });
+
+    function handleAjaxError( xhr, status, error ) {
+        if ( status === 'timeout' ) {
+            alert( 'The server took too long to send the data.' );
+        }
+        else {
+            // User probably refreshed page or clicked on a link, so this isn't really an error
+            if(xhr.readyState == 0 || xhr.status == 0) {
+                return;
+            }
+
+            var errorMessage = "<p class='error'>An unexpected error has occurred on the server.  Please contact your system administrator.";
+
+            if (xhr.responseText) {
+                var errors = JSON.parse(xhr.responseText).errors;
+                if (errors && errors.length) {
+                    $(errors).each(function () {
+                        errorMessage += "</br><code>" + this + "</code>"
+                    });
+                }
+            }
+            $("#error-messages").html(errorMessage + "</p>");
+        }
+    }
+</script>
+</body>
+</html>

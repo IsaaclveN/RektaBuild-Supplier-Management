@@ -1,0 +1,26 @@
+.tab-badge {
+    position: relative;
+}
+
+.tab-badge:before {
+    content: attr(data-count);
+    position: absolute;
+    top: -0.45em;
+    right: -0.45em;
+    min-width: 1.8em;
+    height: 1.8em;
+    display: grid;
+    padding: 0 0.5em;
+    place-items: center;
+    font-size: 0.8em;
+    border-radius: 1em;
+    background-color: rgb(235, 0, 20);
+    color: white;
+}
+
+.ui-tabs-nav > .tab-badge::before {
+    background-color: rgb(192, 192, 192);
+}
+.ui-tabs-nav > .ui-state-active.tab-badge::before {
+    background-color: green;
+}

@@ -1,0 +1,103 @@
+<%@ page import="org.pih.warehouse.order.OrderItemStatusCode" %>
+<%@ page import="org.pih.warehouse.order.OrderType" %>
+<%@ page import="org.pih.warehouse.order.OrderTypeCode" %>
+<%@ page import="org.pih.warehouse.core.Constants;" %>
+
+
+<script>
+  $(document).ready(function() {
+    $("#orderItemsDetailsFilter").keyup(function(event){
+      const filterCells = [0, 1, 2]; // filter by product code, product name, or supplier code
+      const filterValue = $("#orderItemsDetailsFilter")
+        .val()
+        .toUpperCase();
+      const tableRows = $("#order-items-details tr.dataRowItemDetails");
+      filterTableItems(filterCells, filterValue, tableRows)
+    });
+  });
+
+</script>
+
+
+<div id="tab-content" class="box">
+    <h2>
+        <warehouse:message code="order.itemDetails.label" default="Item Details"/>
+    </h2>
+    <g:if test="${orderInstance.orderType != OrderType.findByCode(Constants.PUTAWAY_ORDER)}">
+        <input type="text" id="orderItemsDetailsFilter" class="text large" placeholder="${g.message(code: 'order.filterByProductOrSupplier.label', default: 'Filter by product name, code, or supplier code')}"/>
+    </g:if>
+    <g:if test="${orderInstance?.orderItems }">
+        <table data-testid="item-details-table" class="table table-bordered" id="order-items-details">
+            <thead>
+            <tr class="odd">
+                <th><warehouse:message code="product.productCode.label" /></th>
+                <th><warehouse:message code="product.label" /></th>
+                <th class="center"><warehouse:message code="product.supplierCode.label"/></th>
+                <th class="center"><warehouse:message code="product.manufacturer.label"/></th>
+                <th class="center"><warehouse:message code="product.manufacturerCode.label"/></th>
+                <th class="center"><warehouse:message code="orderItem.quantity.label"/></th>
+                <th class="center"><warehouse:message code="product.uom.label"/></th>
+                <th class="center"><warehouse:message code="orderItem.recipient.label"/></th>
+                <th class="center"><warehouse:message code="orderItem.quotedShipDate.label"/></th>
+                <th class="center"><warehouse:message code="orderItem.currentExpectedShipDate.label"/></th>
+                <th class="center"><warehouse:message code="orderItem.budgetCode.label"/></th>
+                %{-- When adding/removing a column, make sure to check the filterCell in function for filtering above --}%
+            </tr>
+            </thead>
+            <tbody>
+            <g:each var="orderItem" in="${orderInstance?.orderItems?.sort { a,b -> a.dateCreated <=> b.dateCreated ?: a.orderIndex <=> b.orderIndex }}" status="i">
+                <g:set var="isItemCanceled" value="${orderItem.orderItemStatusCode == OrderItemStatusCode.CANCELED}"/>
+                <g:if test="${!isItemCanceled || orderInstance?.orderType==OrderType.findByCode(OrderTypeCode.PURCHASE_ORDER.name())}">
+                    <tr class="order-item ${(i % 2) == 0 ? 'even' : 'odd'} dataRowItemDetails" style="${isItemCanceled ? 'background-color: #ffcccb;' : ''}">
+                        <td data-testid="product-code">
+                            ${orderItem?.product?.productCode?:""}
+                        </td>
+                        <td data-testid="product-name" class="order-item-product">
+                            <g:link controller="inventoryItem" action="showStockCard" params="['product.id':orderItem?.product?.id]">
+                                <format:displayName product="${orderItem?.product}" productSupplier="${orderItem?.productSupplier}" showTooltip="${true}" />
+                                <g:renderHandlingIcons product="${orderItem?.product}" />
+                            </g:link>
+                        </td>
+                        <g:if test="${!isItemCanceled}">
+                            <td data-testid="supplier-code" class="center">
+                                ${orderItem?.productSupplier?.supplierCode}
+                            </td>
+                            <td data-testid="manufacturer-name" class="center">
+                                ${orderItem?.productSupplier?.manufacturer?.name}
+                            </td>
+                            <td data-testid="manufacturer-code" class="center">
+                                ${orderItem?.productSupplier?.manufacturerCode}
+                            </td>
+                            <td data-testid="quantity" class="center">
+                                ${orderItem?.quantity}
+                            </td>
+                            <td data-testid="unit-of-measure" class="center">
+                                ${orderItem?.unitOfMeasure}
+                            </td>
+                            <td data-testid="recipient" class="center">
+                                ${orderItem?.recipient}
+                            </td>
+                            <td data-testid="estimated-ready-date" class="center">
+                                <g:formatDate date="${orderItem?.estimatedReadyDate}" format="dd/MMM/yyyy"/>
+                            </td>
+                            <td data-testid="actual-ready-date" class="center">
+                                <g:formatDate date="${orderItem?.actualReadyDate}" format="dd/MMM/yyyy"/>
+                            </td>
+                            <td data-testid="budget-code" class="center">
+                                ${orderItem?.budgetCode?.code}
+                            </td>
+                        </g:if>
+                        <g:else>
+                            <td colspan="9"></td>
+                        </g:else>
+                    </tr>
+                </g:if>
+            </g:each>
+            </tbody>
+        </table>
+    </g:if>
+    <g:else>
+        <div class="fade center empty"><warehouse:message code="default.noItems.label" /></div>
+    </g:else>
+</div>
+

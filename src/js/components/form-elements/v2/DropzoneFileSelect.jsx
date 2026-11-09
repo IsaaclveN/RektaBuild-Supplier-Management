@@ -1,0 +1,241 @@
+import React, { useCallback, useEffect } from 'react';
+
+import PropTypes from 'prop-types';
+import { useDropzone } from 'react-dropzone';
+import { RiUpload2Line } from 'react-icons/ri';
+import { useSelector } from 'react-redux';
+import { getMaxUploadFileSize } from 'selectors';
+
+import Button from 'components/form-elements/Button';
+import notification from 'components/Layout/notifications/notification';
+import NotificationType from 'consts/notificationTypes';
+import useTranslate from 'hooks/useTranslate';
+import { bytesToMB } from 'utils/number-utils';
+
+import './style.scss';
+
+const DropzoneFileSelect = ({
+  height,
+  width,
+  minHeight,
+  dropzoneText,
+  buttonLabel,
+  buttonVariant,
+  className,
+  multiple,
+  maxFiles,
+  allowedExtensions,
+  isFormDisabled,
+  showButtonOnly,
+  throwErrorOnInvalidFiles,
+  onChange,
+  ...fieldProps
+}) => {
+  const maxFileSize = useSelector(getMaxUploadFileSize);
+
+  const onDrop = useCallback((acceptedFiles) => {
+    onChange?.(multiple ? acceptedFiles : acceptedFiles[0]);
+  }, []);
+
+  const translate = useTranslate();
+
+  const getFileExtension = (file) => file.path.split('.')?.[1];
+
+  const validateFileType = (file) => {
+    if (!allowedExtensions.length || allowedExtensions.includes(getFileExtension(file))) {
+      return null;
+    }
+
+    return {
+      code: 'invalid-extension',
+      message: translate(
+        'react.default.error.invalidFilesExtension.label',
+        `File extension should be one of: ${allowedExtensions.join(', ')}`,
+        [allowedExtensions.join(', ')],
+      ),
+    };
+  };
+
+  const validateFileSize = (file) => {
+    if (!maxFileSize || file.size <= maxFileSize) {
+      return null;
+    }
+
+    const MaxFileSizeInMB = bytesToMB(maxFileSize);
+    return {
+      code: 'file-too-large',
+      message: translate(
+        'react.default.error.fileTooLarge.label',
+        `File exceeds max file size of ${MaxFileSizeInMB} MB`,
+        [MaxFileSizeInMB],
+      ),
+    };
+  };
+
+  const hasFileErrors = (file) => validateFileType(file) || validateFileSize(file);
+
+  const {
+    getRootProps, getInputProps, open, acceptedFiles, fileRejections,
+  } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    validator: hasFileErrors,
+    multiple,
+    maxFiles,
+    disabled: isFormDisabled,
+  });
+
+  if (throwErrorOnInvalidFiles) {
+    useEffect(() => {
+      if (fileRejections.length) {
+        const errorMessage = fileRejections.map((file) => file.errors.map((e) => {
+          const data = file?.path ? file : file.file;
+          return (
+            <p>
+              <strong>{data.path}</strong>
+              {' '}
+              -
+              {' '}
+              {e.message}
+            </p>
+          );
+        }));
+
+        notification(NotificationType.ERROR_OUTLINED)({
+          message: translate('react.default.error.uploadingFiles.label', 'Error while uploading files'),
+          details: errorMessage,
+        });
+      }
+    }, [fileRejections]);
+  }
+
+  const mapFiles = (files) => files.map((file) => {
+    const data = file?.path ? file : file.file;
+    return (
+      <li key={data.path}>
+        {data.path}
+        {' '}
+        (
+        {data.size}
+        {' '}
+        bytes)
+        {file?.errors?.length ? (
+          <ul>
+            {file.errors.map((e) => (
+              <li key={e.code}>{e.message}</li>
+            ))}
+          </ul>
+        ) : null}
+      </li>
+    );
+  });
+
+  if (showButtonOnly) {
+    return (
+      <div {...getRootProps({ className })} {...fieldProps}>
+        <input {...getInputProps()} />
+        <Button
+          disabled={isFormDisabled}
+          StartIcon={<RiUpload2Line className="icon" />}
+          onClick={open}
+          variant={buttonVariant}
+          defaultLabel={buttonLabel.defaultMessage}
+          label={buttonLabel.id}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width, height, minHeight }}>
+      <div {...getRootProps({ className: `dropzone d-flex flex-column justify-content-center align-items-center p-3 bg-light ${className}` })} {...fieldProps}>
+        <input {...getInputProps()} />
+        <h5 className="text-secondary font-italic">{translate(dropzoneText.id, dropzoneText.defaultMessage)}</h5>
+        <Button disabled={isFormDisabled} className="mt-3" onClick={open} variant={buttonVariant} defaultLabel={buttonLabel.defaultMessage} label={buttonLabel.id} />
+      </div>
+      {acceptedFiles.length ? (
+        <aside>
+          <h6 className="text-success">
+            {translate('react.default.acceptedFiles.label', 'Accepted Files')}
+            :
+          </h6>
+          <ul>
+            {mapFiles(acceptedFiles)}
+          </ul>
+        </aside>
+      ) : null}
+      {fileRejections.length ? (
+        <aside>
+          <h6 className="text-danger">
+            {translate('react.default.rejectedFiles.label', 'Rejected Files')}
+            :
+          </h6>
+          <ul>
+            {mapFiles(fileRejections)}
+          </ul>
+        </aside>
+      ) : null}
+    </div>
+  );
+};
+
+export default DropzoneFileSelect;
+
+DropzoneFileSelect.propTypes = {
+  // Text displayed on the dropzone
+  dropzoneText: PropTypes.shape({
+    id: PropTypes.string,
+    defaultMessage: PropTypes.string,
+  }),
+  // Label displayed on the button for uploading files
+  buttonLabel: PropTypes.shape({
+    id: PropTypes.string,
+    defaultMessage: PropTypes.string,
+  }),
+  buttonVariant: PropTypes.string,
+  // width of the dropzone
+  width: PropTypes.string,
+  // height of the dropzone
+  height: PropTypes.string,
+  minHeight: PropTypes.string,
+  // classname applied to the dropzone
+  className: PropTypes.string,
+  // indicator whether we can upload multiple files
+  multiple: PropTypes.bool,
+  // maximal count of files to upload (disabled when set to null)
+  maxFiles: PropTypes.number,
+  // allowed extensions for importing (disabled when set to empty array)
+  allowedExtensions: PropTypes.arrayOf(PropTypes.string),
+  isFormDisabled: PropTypes.bool,
+  // If true, hides the dropzone UI and shows only the upload button.
+  // Drag & drop is still available, even if the dropzone area is hidden.
+  showButtonOnly: PropTypes.bool,
+  // If true, will display errors for invalid files (useful when displaying only the button)
+  throwErrorOnInvalidFiles: PropTypes.bool,
+  // Called with the selected file(s) when the user picks files
+  onChange: PropTypes.func,
+};
+
+DropzoneFileSelect.defaultProps = {
+  dropzoneText: {
+    id: 'react.default.dragDropHere.label',
+    defaultMessage: 'Drag and drop file here.',
+  },
+  buttonLabel: {
+    id: 'react.default.fileDialog.label',
+    defaultMessage: 'OPEN FILE DIALOG',
+  },
+  buttonVariant: 'grayed',
+  width: 'auto',
+  height: 'auto',
+  minHeight: '200px',
+  className: '',
+  multiple: false,
+  maxFiles: null,
+  allowedExtensions: [],
+  isFormDisabled: false,
+  showButtonOnly: false,
+  throwErrorOnInvalidFiles: false,
+  onChange: () => {},
+};

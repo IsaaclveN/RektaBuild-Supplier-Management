@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9 http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
+
+  <changeSet id="1580848680306-1" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-demand-view.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-1b" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists tableName="product_demand_details" />
+      </not>
+    </preConditions>
+    <sqlFile path="views/product-demand-details.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-2" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-inventory-snapshot-view.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-3" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-inventory-extended-view.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-4" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-inventory-pivot-view.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-5" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-inventory-compare-view.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-6" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-inventory-expiry-view.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-7" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/on-order-order-item-summary.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-8" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/on-order-shipment-item-summary.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-9" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/on-order-summary.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-10" author="dhatala" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-snapshot.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-11" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/fill-rate.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-13" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-summary.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-14" author="dhatala" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-stocklist.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-15" author="dhatala" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/stock-movement-item.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-16" author="dhatala" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-substitution-status.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-17" author="dhatala" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/edit-page-item.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-18" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-stockout.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-19" author="dhatala" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-supplier-clean.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-20" author="dhatala" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/invoice-list.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-21" author="pmuchowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/invoice-candidate-view.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-22" author="dhatala" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/stocklist-item-list.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-23" author="awalkowiak" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/order-summary-helper-views.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-23b" author="awalkowiak" runOnChange="true" runAlways="true" failOnError="true">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists tableName="order_summary_mv" />
+      </not>
+    </preConditions>
+    <sqlFile path="views/order-summary-materialized-view.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-24" author="pmuchowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/substitution-item.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-25" author="dbienkowska" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/supplier-list.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-26" author="awalkowiak" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/requirement.sql"/>
+  </changeSet>
+  <!-- should this fail, ReportService.refreshProductDemandData() rebuilds this migration's tables anyway -->
+  <changeSet id="1580848680306-27" author="pmuchowski" runOnChange="true" runAlways="true" failOnError="false">
+    <sqlFile path="views/product-expiry-summary.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-28" author="pmuchowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/stock-movement.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-29" author="awalkowiak" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/stock-movement-list-item.sql"/>
+  </changeSet>
+  <changeSet id="1580848680306-30" author="awalkowiak" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/order-item-details.sql"/>
+  </changeSet>
+  <!-- views required for cycle count last counted -->
+  <changeSet id="1740696149645-0" author="kchelstowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-inventory-candidate.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-6" author="kchelstowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/inventory-counts-helper-views.sql"/>
+  </changeSet>
+  <changeSet id="1740696149645-1" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-cycle-count-history.sql"/>
+  </changeSet>
+  <changeSet id="1740696149645-2" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-physical-count-history.sql"/>
+  </changeSet>
+  <changeSet id="1740696149645-3" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-receipt-history.sql"/>
+  </changeSet>
+  <changeSet id="1740696149645-4" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-count-history.sql"/>
+  </changeSet>
+  <!-- views required for cycle count ranking -->
+  <changeSet id="1740696149645-7" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/product-classification.sql"/>
+  </changeSet>
+  <changeSet id="1740696149645-6" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/cycle-count-frequency.sql"/>
+  </changeSet>
+  <changeSet id="1740696149645-5" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/cycle-count-metadata.sql"/>
+  </changeSet>
+  <!-- view(s) required for the cycle count session -->
+  <changeSet id="1580848680306-31" author="kchelstowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/cycle-count-session.sql"/>
+  </changeSet>
+  <changeSet id="1740696149645-8" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/cycle-count-candidate.sql"/>
+  </changeSet>
+  <changeSet id="1740696149645-9" author="kchelstowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/pending_cycle_count_request.sql"/>
+  </changeSet>
+  <changeSet id="1746501428101-" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/cycle-count-details.sql"/>
+  </changeSet>
+  <changeSet id="1746501428101-2" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/cycle-count-summary.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-1" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/inventory-audit-details.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-3" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/inventory-audit-rollup.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-2" author="jmiranda" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/inventory-audit-summary.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-3" author="slib" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/latest-transaction-per-cycle-count.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-4" author="slib" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/cycle-count-product-summary.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-5" author="kchelstowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/inventory-transaction-summary-helper-views.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-5b" author="kchelstowski" runOnChange="true" runAlways="true" failOnError="true">
+    <preConditions onFail="MARK_RAN">
+      <and>
+        <not>
+          <indexExists indexName="idx_product_code_inventory" schemaName="inventory_movement_summary" />
+        </not>
+        <not>
+          <indexExists indexName="idx_product_code_facility" schemaName="product_inventory_summary" />
+        </not>
+        <not>
+          <indexExists indexName="idx_product_id_facility" schemaName="product_inventory_summary" />
+        </not>
+        <not>
+          <indexExists indexName="idx_product_inventory_summary_lookup" schemaName="product_inventory_summary" />
+        </not>
+      </and>
+    </preConditions>
+    <sqlFile path="views/inventory-transaction-summary-helper-views-indexes.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-7" author="kchelstowski" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/inventory-counts.sql"/>
+  </changeSet>
+  <changeSet id="1748970410098-8" author="slib" runOnChange="true" runAlways="true" failOnError="true">
+    <sqlFile path="views/inbound-stock-movement-list-item.sql"/>
+   </changeSet>
+</databaseChangeLog>

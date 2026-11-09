@@ -1,0 +1,129 @@
+package org.pih.warehouse.core.localization
+
+import java.text.MessageFormat
+import org.apache.commons.lang.StringUtils
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.MessageSource
+import org.springframework.context.support.DefaultMessageSourceResolvable
+import org.springframework.stereotype.Component
+
+import org.pih.warehouse.core.Localization
+import org.pih.warehouse.core.session.SessionManager
+
+/**
+ * Translates messages into a specific locale.
+ */
+@Component
+class MessageLocalizer {
+
+    @Autowired
+    MessageSource messageSource
+
+    @Autowired
+    LocaleManager localeManager
+
+    @Autowired
+    SessionManager sessionManager
+
+    @Value('${openboxes.locale.custom.enabled}')
+    boolean localizationDatabaseEnabled
+
+    /**
+     * Translates a given localizable message into the locale of the requesting user.
+     */
+    String localize(LocalizableMessage message, Locale localeOverride=null) {
+        return localize(message.code, message.args, localeOverride)
+    }
+
+    /**
+     * Translates a given localizable message into the locale of the requesting user.
+     * This includes validation errors (as FieldError and ObjectError instances).
+     */
+    String localize(DefaultMessageSourceResolvable error, Locale localeOverride=null) {
+        // Field errors carry a chain of message codes ordered from most to least specific, for example:
+        // "preferredBinLocationsCommand.products.nullable" ... "nullable". Try each of them so that
+        // messages can be defined in messages.properties at any level of specificity.
+        for (String code in error.codes) {
+            String message = localize(code, error.arguments, localeOverride)
+            // localize() falls back to returning the code itself when it doesn't resolve to any
+            // message, so treat that as "not found" and try the next (more generic) code.
+            if (message != null && message != code) {
+                return message
+            }
+        }
+        // Keep the existing behaviour of returning the most generic code as-is when no message
+        // is configured, so that it's obvious that the code is missing a localization.
+        return error.code
+    }
+
+    /**
+     * Translates a given code/label into the locale of the requesting user.
+     */
+    String localize(String code, List args, Locale localeOverride=null) {
+        return localize(code, args as Object[], localeOverride)
+    }
+
+    /**
+     * Translates a given code/label into the locale of the requesting user.
+     *
+     * If the code does not resolve to a localization label, we return the code itself.
+     * We do this so that it's very obvious when a code has been misconfigured. Otherwise
+     * if we simply return some default English string we might not catch the issue right away.
+     */
+    String localize(String code, Object[] args=[], Locale localeOverride=null) {
+        // It's rare, but we sometimes want to always display some string in the same locale, regardless of
+        // the locale of the requesting user. For example, when displaying a language's name.
+        Locale localeToUse = localeOverride ?: localeManager.getCurrentLocale()
+
+        // Custom message overrides always take priority over those in messages.properties files.
+        String messageOverride = getMessageOverride(code, args, localeToUse)
+        if (messageOverride != null) {
+            return messageOverride
+        }
+
+        // If no message override is specified, localize via Spring's messages.properties files, which automatically
+        // handles character encoding as well as region > language locale fall backs (ie if the message is not found
+        // in messages_es_MX.properties, it will look in 'messages_es.properties').
+        return messageSource.getMessage(code, args, code, localeToUse)
+    }
+
+    /**
+     * Convenience method for localizing Enum values.
+     */
+    public <T extends Enum<T>> String localizeEnumValue(T enumValue, Locale localeOverride=null) {
+        // Our localization message keys for Enums are standardized to "enum.<enum_class>.<enum_key>"
+        // For example: "enum.ActivityCode.ADJUST_INVENTORY"
+        return localize("enum.${enumValue.class.simpleName}.${enumValue.name()}", localeOverride)
+    }
+
+    /**
+     * Convenience method for localizing a collection of Enum values.
+     */
+    public <T extends Enum<T>> List<String> localizeEnumValues(Collection<T> enumValues, Locale localeOverride=null) {
+        if (!enumValues) {
+            return []
+        }
+
+        return enumValues.collect { localizeEnumValue(it, localeOverride) }
+    }
+
+    /**
+     * Returns a custom message override if one exists in the Localization database.
+     *
+     * We allow localization for individual codes to be overridden by data in the Localization database table.
+     * This allows individual implementations to add translations specific to their unique setup dynamically
+     * without needing to modify the shared messages.properties files.
+     */
+    private String getMessageOverride(String code, Object[] args=[], Locale locale) {
+        if (!localizationDatabaseEnabled) {
+            return null
+        }
+
+        // TODO: We should fetch the database overrides for the fallback locales as well so that we can default
+        //       to those if a message is in the database for 'es' but not in the 'es_MX' messages.properties file.
+
+        String message = Localization.findByCodeAndLocale(code, locale.toString())?.text
+        return StringUtils.isBlank(message) ? null : MessageFormat.format(message, args).encodeAsHTML()
+    }
+}

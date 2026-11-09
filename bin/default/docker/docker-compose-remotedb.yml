@@ -1,0 +1,13 @@
+# For running the app against a database that is externally managed on a separate host
+services:
+    app:
+      extends: 
+        file: docker-compose-base.yml
+        service: app
+
+    nginx:
+      extends: 
+        file: docker-compose-base.yml
+        service: nginx
+      depends_on:
+          - app

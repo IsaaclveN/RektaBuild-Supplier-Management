@@ -1,0 +1,106 @@
+/**
+ * Copyright (c) 2012 Partners In Health.  All rights reserved.
+ * The use and distribution terms for this software are covered by the
+ * Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+ * which can be found in the file epl-v10.html at the root of this distribution.
+ * By using this software in any fashion, you are agreeing to be bound by
+ * the terms of this license.
+ * You must not remove this notice, or any other, from this software.
+ **/
+package org.pih.warehouse.order
+
+import grails.validation.ValidationException
+import org.pih.warehouse.core.ActivityCode
+import org.pih.warehouse.core.Location
+import org.pih.warehouse.core.User
+
+class PurchaseOrderController {
+
+
+    def orderService
+
+    def index() {
+        redirect(action: "create")
+    }
+
+    def list() {
+        render(view: "/common/react")
+    }
+
+
+    def create() {
+        Location currentLocation = Location.get(session.warehouse.id)
+        User user = User.get(session.user.id)
+        if (!currentLocation.supports(ActivityCode.PLACE_ORDER)) {
+            throw new UnsupportedOperationException("${warehouse.message(code: 'errors.noPermissions.label')}")
+        }
+        Boolean isCentralPurchasingEnabled = currentLocation.supports(ActivityCode.ENABLE_CENTRAL_PURCHASING)
+        Order order = orderService.createNewPurchaseOrder(currentLocation, user, isCentralPurchasingEnabled)
+        render(template: "enterOrderDetails", model: [order: order, isCentralPurchasingEnabled: isCentralPurchasingEnabled])
+    }
+
+
+    def edit() {
+        Order order = Order.get(params?.id)
+        Location currentLocation = Location.get(session.warehouse.id)
+        if (!currentLocation.supports(ActivityCode.PLACE_ORDER)) {
+            throw new UnsupportedOperationException("${warehouse.message(code: 'errors.noPermissions.label')}")
+        }
+        def isCentralPurchasingEnabled = currentLocation.supports(ActivityCode.ENABLE_CENTRAL_PURCHASING)
+        if (order) {
+            render(template: "enterOrderDetails", model: [order: order, isCentralPurchasingEnabled: isCentralPurchasingEnabled])
+        } else {
+            redirect(action: "create")
+        }
+    }
+
+
+    def saveOrderDetails() {
+        if (!params.order) {
+            // An edge case where the user has tried to submit the order once, failed validation, then switches
+            // locations. The chooseLocation flow redirects back to this controller but loses all the params.
+            // Since we don't have any of the original data (including if we were on the create or edit flow)
+            // we simply redirect out of the save flow.
+            redirect(action: "list")
+            return
+        }
+        Order order = params.order?.id ? Order.get(params.order.id) : new Order()
+
+        if (order.orderItems && order.origin.id != params.origin.id) {
+            order.errors.reject("purchaseOrder.supplierError.label", "Cannot change the supplier for a PO with item lines.")
+            render(template: "enterOrderDetails", model: [order: order])
+            return
+        } else {
+            order.properties = params
+            try {
+                if (!orderService.saveOrder(order)) {
+                    order.errors.reject("purchaseOrder.saveError.label", "Can't save order due to an error.")
+                }
+            } catch (ValidationException e) {
+                order.errors = e.errors
+            }
+        }
+
+        if (order.hasErrors()) {
+            render(template: "enterOrderDetails", model: [order: order])
+            return
+        }
+
+        redirect(action: "addItems", id: order.id)
+    }
+
+
+    def addItems() {
+        Order order = Order.get(params?.id)
+        def currentLocation = Location.get(session.warehouse.id)
+        if (!currentLocation.supports(ActivityCode.PLACE_ORDER)) {
+            throw new UnsupportedOperationException("${warehouse.message(code: 'errors.noPermissions.label')}")
+        }
+        def isAccountingRequired = currentLocation?.isAccountingRequired()
+        if (order) {
+            render(template: "showOrderItems", model: [order: order, isAccountingRequired: isAccountingRequired])
+        } else {
+            redirect(action: "create")
+        }
+    }
+}

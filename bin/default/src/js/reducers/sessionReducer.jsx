@@ -1,0 +1,180 @@
+import _ from 'lodash';
+
+import {
+  CHANGE_CURRENT_LOCALE,
+  CHANGE_CURRENT_LOCATION,
+  FETCH_MENU_CONFIG,
+  FETCH_SESSION_INFO,
+  START_FETCHING_TRANSLATIONS,
+  TOGGLE_USER_ACTION_MENU,
+  TRANSLATIONS_FETCHED,
+} from 'actions/types';
+
+const initialState = {
+  currentLocation: {
+    id: '',
+    name: '',
+    hasBinLocationSupport: true,
+    hasPackingSupport: true,
+    hasPartialReceivingSupport: true,
+    hasCentralPurchasingEnabled: true,
+    locationType: { description: '', locationTypeCode: '' },
+  },
+  isSuperuser: false,
+  isUserAdmin: false,
+  isUserApprover: false,
+  isUserRequestApprover: false,
+  supportedActivities: [],
+  menuConfig: [],
+  menuSectionsUrlParts: {},
+  activeLanguage: '',
+  activeLanguageTag: '',
+  fetchedTranslations: {
+    default: false,
+    invoice: false,
+    stockMovement: false,
+    partialReceiving: false,
+    putAway: false,
+    stockListManagement: false,
+    stockTransfer: false,
+    replenishment: false,
+    outboundReturns: false,
+    inboundReturns: false,
+    productsConfiguration: false,
+    locationsConfiguration: false,
+    cycleCount: false,
+  },
+  searchConfig: {
+    debounceTime: 500,
+    minSearchLength: 3,
+  },
+  user: {
+    id: '',
+    username: '',
+  },
+  isImpersonated: false,
+  grailsVersion: '',
+  appVersion: '',
+  branchName: '',
+  buildNumber: '',
+  environment: '',
+  buildDate: '',
+  ipAddress: '',
+  hostname: '',
+  timezone: '',
+  minimumExpirationDate: '',
+  isPaginated: false,
+  logoLabel: '',
+  menuItems: [],
+  userActionMenuOpen: false,
+  highestRole: '',
+  isOpen: false,
+  pageSize: 50,
+  logoUrl: '',
+  supportedLocales: [],
+  currencyCode: '',
+  localizedHelpScoutKey: '',
+  isHelpScoutEnabled: false,
+  loading: false,
+  localizationModeEnabled: false,
+  localizationModeLocale: 'ach',
+  displayDateFormat: 'MMM DD, yyyy',
+  displayDateDefaultValue: '-',
+  notificationAutohideDelay: 8000,
+  browserConnectionTimeout: 0,
+  isAutosaveEnabled: false,
+  autosaveBatchSize: 4,
+  autosaveDebounceTime: 2000,
+  autosaveMaxRetries: 3,
+  autosaveRetryDelay: 5000,
+  autosaveMaxRetryDelay: 40000,
+  cycleCountMaxSelectedProducts: 50,
+  maxUploadFileSize: 2097152,
+};
+
+export default function (state = initialState, action) {
+  switch (action.type) {
+    case FETCH_SESSION_INFO:
+      return {
+        ...state,
+        currentLocation: _.get(action, 'payload.data.data.location'),
+        currentLocationRoles: _.get(action, 'payload.data.data.currentLocationRoles'),
+        isSuperuser: _.get(action, 'payload.data.data.isSuperuser'),
+        isUserAdmin: _.get(action, 'payload.data.data.isUserAdmin'),
+        isUserApprover: _.get(action, 'payload.data.data.isUserApprover', false),
+        isUserRequestApprover: _.get(action, 'payload.data.data.isUserRequestApprover', false),
+        isUserManager: _.get(action, 'payload.data.data.isUserManager', false),
+        supportedActivities: _.get(action, 'payload.data.data.supportedActivities'),
+        activeLanguage: _.get(action, 'payload.data.data.activeLanguage'),
+        activeLanguageTag: _.get(action, 'payload.data.data.activeLanguageTag'),
+        user: _.get(action, 'payload.data.data.user'),
+        isImpersonated: _.get(action, 'payload.data.data.isImpersonated'),
+        grailsVersion: _.get(action, 'payload.data.data.grailsVersion'),
+        appVersion: _.get(action, 'payload.data.data.appVersion'),
+        branchName: _.get(action, 'payload.data.data.branchName'),
+        buildNumber: _.get(action, 'payload.data.data.buildNumber'),
+        environment: _.get(action, 'payload.data.data.environment'),
+        buildDate: _.get(action, 'payload.data.data.buildDate'),
+        ipAddress: _.get(action, 'payload.data.data.ipAddress'),
+        hostname: _.get(action, 'payload.data.data.hostname'),
+        timezone: _.get(action, 'payload.data.data.timezone'),
+        minimumExpirationDate: _.get(action, 'payload.data.data.minimumExpirationDate'),
+        isPaginated: _.get(action, 'payload.data.data.isPaginated'),
+        logoLabel: _.get(action, 'payload.data.data.logoLabel'),
+        menuItems: _.get(action, 'payload.data.data.menuItems'),
+        highestRole: _.get(action, 'payload.data.data.highestRole'),
+        pageSize: _.get(action, 'payload.data.data.pageSize'),
+        logoUrl: _.get(action, 'payload.data.data.logoUrl'),
+        supportedLocales: _.get(action, 'payload.data.data.supportedLocales'),
+        currencyCode: _.get(action, 'payload.data.data.currencyCode'),
+        localizedHelpScoutKey: _.get(action, 'payload.data.data.localizedHelpScoutKey'),
+        isHelpScoutEnabled: _.get(action, 'payload.data.data.isHelpScoutEnabled'),
+        loading: false,
+        localizationModeEnabled: _.get(action, 'payload.data.data.localizationModeEnabled', false),
+        localizationModeLocale: _.get(action, 'payload.data.data.localizationModeLocale', 'ach'),
+        displayDateFormat: _.get(action, 'payload.data.data.displayDateFormat', 'MMM DD, yyyy'),
+        displayDateDefaultValue: _.get(action, 'payload.data.data.displayDateDefaultValue', '-'),
+        notificationAutohideDelay: _.get(action, 'payload.data.data.notificationAutohideDelay', 8000),
+        browserConnectionTimeout: _.get(action, 'payload.data.data.browserConnectionTimeout', 0),
+        isAutosaveEnabled: _.get(action, 'payload.data.data.isAutosaveEnabled', false),
+        autosaveBatchSize: _.get(action, 'payload.data.data.autosaveBatchSize', 4),
+        autosaveDebounceTime: _.get(action, 'payload.data.data.autosaveDebounceTime', 2000),
+        autosaveMaxRetries: _.get(action, 'payload.data.data.autosaveMaxRetries', 3),
+        autosaveRetryDelay: _.get(action, 'payload.data.data.autosaveRetryDelay', 5000),
+        autosaveMaxRetryDelay: _.get(action, 'payload.data.data.autosaveMaxRetryDelay', 40000),
+        cycleCountMaxSelectedProducts: _.get(action, 'payload.data.data.cycleCountMaxSelectedProducts', 50),
+        maxUploadFileSize: _.get(action, 'payload.data.data.maxUploadFileSize', 2097152),
+      };
+    case FETCH_MENU_CONFIG:
+      return {
+        ...state,
+        menuConfig: _.get(action, 'payload.data.data.menuConfig'),
+        menuSectionsUrlParts: _.get(action, 'payload.data.data.menuSectionsUrlParts'),
+      };
+    case CHANGE_CURRENT_LOCATION:
+      return { ...state, currentLocation: action.payload, loading: true };
+    case CHANGE_CURRENT_LOCALE:
+      return {
+        ...state,
+        activeLanguage: action.payload.data.data.activeLanguage,
+        activeLanguageTag: action.payload.data.data.activeLanguageTag,
+      };
+    case TRANSLATIONS_FETCHED:
+      return {
+        ...state,
+        fetchedTranslations: { ...state.fetchedTranslations, [action.payload]: true },
+      };
+    case START_FETCHING_TRANSLATIONS:
+      return {
+        ...state,
+        fetchedTranslations: { ...state.fetchedTranslations, [action.payload]: false },
+      };
+    case TOGGLE_USER_ACTION_MENU:
+      return {
+        ...state,
+        userActionMenuOpen: action.payload,
+      };
+    default:
+      return state;
+  }
+}

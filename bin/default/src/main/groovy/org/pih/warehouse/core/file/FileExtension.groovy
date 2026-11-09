@@ -1,0 +1,45 @@
+package org.pih.warehouse.core.file
+
+import org.apache.commons.lang.StringUtils
+
+/**
+ * Enumerates the file extensions that we operate on within the application.
+ */
+enum FileExtension {
+
+    NONE(''),
+    CSV('csv'),
+    DOC('doc'),
+    DOCX('docx'),
+    GIF('gif'),
+    HTML('html'),
+    JPEG('jpeg'),
+    JPG('jpg'),
+    JSON('json'),
+    PDF('pdf'),
+    PNG('png'),
+    TXT('txt'),
+    WEBP('webp'),
+    XLS('xls'),
+    XLSX('xlsx'),
+    XML('xml')
+
+    /**
+     * The file extension associated with that file type.
+     */
+    String extension
+
+    FileExtension(String extension) {
+        this.extension = extension
+    }
+
+    static FileExtension fromExtensionString(String extension) {
+        String extensionSanitized = extension?.trim()?.toLowerCase()?.replaceFirst('^\\.', '')
+
+        if (StringUtils.isBlank(extensionSanitized)) {
+            return NONE
+        }
+
+        return values().find { it.extension == extensionSanitized }
+    }
+}

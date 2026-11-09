@@ -1,0 +1,235 @@
+import React, { useRef } from 'react';
+
+import { format, parse } from 'date-fns';
+import PropTypes from 'prop-types';
+import DatePicker from 'react-datepicker-6';
+import { useSelector } from 'react-redux';
+import { getCurrentLocale } from 'selectors';
+
+import DateFieldInput from 'components/form-elements/v2/DateFieldInput';
+import componentType from 'consts/componentType';
+import MAX_DATE_PICKER_DATE from 'consts/datePickerLimits';
+import { DateFormatDateFns, TimeFormat } from 'consts/timeFormat';
+import useFocusOnMatch from 'hooks/useFocusOnMatch';
+import useTranslate from 'hooks/useTranslate';
+import { formatDateToString, getDateFnsLocale } from 'utils/dateUtils';
+import InputWrapper from 'wrappers/InputWrapper';
+import RootPortalWrapper from 'wrappers/RootPortalWrapper';
+
+import 'components/form-elements/DateFilter/DateFilter.scss';
+import 'components/form-elements/v2/style.scss';
+import 'react-datepicker-6/dist/react-datepicker.css';
+
+const DateFieldDateFns = ({
+  title,
+  required,
+  tooltip,
+  disabled,
+  errorMessage,
+  placeholder,
+  button,
+  className,
+  value,
+  onChange,
+  showTimeSelect,
+  hideErrorMessageWrapper,
+  customDateFormat,
+  onChangeRaw,
+  clearable,
+  wrapperClassName,
+  focusProps = {},
+  customTooltip,
+  showCustomInput,
+  ariaLabel,
+  hasErrors,
+  ...fieldProps
+}) => {
+  const translate = useTranslate();
+  const onClear = () => onChange(null);
+
+  const currentLocale = useSelector(getCurrentLocale);
+
+  const getDateFormat = () => {
+    if (showTimeSelect) {
+      return customDateFormat
+        ? `${customDateFormat} ${TimeFormat.HH_MM_SS}`
+        : DateFormatDateFns.MMM_DD_YYYY_HH_MM_SS;
+    }
+    return customDateFormat || DateFormatDateFns.MMM_DD_YYYY;
+  };
+
+  const formatDate = (dateToFormat) => {
+    if (!dateToFormat) {
+      return null;
+    }
+
+    try {
+      return parse(
+        dateToFormat,
+        getDateFormat(),
+        new Date(),
+      );
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const selectedDate = formatDate(value);
+  const highlightedDates = [selectedDate || new Date()];
+
+  const placeholderText = typeof placeholder === 'object'
+    ? translate(placeholder?.id, placeholder?.defaultMessage)
+    : placeholder;
+
+  const datePickerRef = useRef(null);
+
+  const onChangeHandler = (date) => {
+    if (!date) {
+      onChange(null);
+      return;
+    }
+
+    const formatted = format(date, getDateFormat());
+    onChange(formatted);
+  };
+
+  useFocusOnMatch({
+    ...focusProps,
+    ref: datePickerRef,
+    type: componentType.DATE_FIELD,
+  });
+
+  return (
+    <InputWrapper
+      title={title}
+      required={required}
+      tooltip={tooltip}
+      errorMessage={errorMessage}
+      button={button}
+      hideErrorMessageWrapper={hideErrorMessageWrapper}
+      className={wrapperClassName}
+      customTooltip={customTooltip}
+      value={formatDateToString({
+        date: value,
+        dateFormat: DateFormatDateFns.DD_MMM_YYYY,
+        options: { locale: getDateFnsLocale(currentLocale) },
+      })}
+      ariaLabel={ariaLabel}
+      hasErrors={Boolean(errorMessage || hasErrors)}
+    >
+      <DatePicker
+        {...fieldProps}
+        // ariaLiveMessages is a new prop for displaying a message above the date field.
+        // By passing an empty object, we are hiding that message.
+        ariaLiveMessages={{}}
+        locale={getDateFnsLocale(currentLocale)}
+        showTimeSelect={showTimeSelect}
+        customInput={showCustomInput
+          ? <DateFieldInput onClear={onClear} clearable={clearable} />
+          : undefined}
+        className={`form-element-input ${(errorMessage || hasErrors) ? 'has-errors' : ''} ${className}`}
+        dropdownMode="scroll"
+        dateFormat={getDateFormat()}
+        timeFormat={TimeFormat.HH_MM}
+        disabled={disabled}
+        timeIntervals={15}
+        yearDropdownItemNumber={3}
+        showYearDropdown
+        scrollableYearDropdown
+        disabledKeyboardNavigation
+        placeholderText={placeholderText}
+        popperContainer={RootPortalWrapper}
+        popperPlacement="bottom-start"
+        selected={selectedDate}
+        maxDate={MAX_DATE_PICKER_DATE}
+        highlightDates={highlightedDates}
+        onChange={onChangeRaw || onChangeHandler}
+        onSelect={() => {
+          datePickerRef.current?.setOpen(false);
+        }}
+        ref={(el) => {
+          datePickerRef.current = el;
+        }}
+        autoComplete="off"
+      />
+    </InputWrapper>
+  );
+};
+
+export default DateFieldDateFns;
+
+DateFieldDateFns.propTypes = {
+  tooltip: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+  }),
+  required: PropTypes.bool,
+  title: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+  }),
+  button: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+    onClick: PropTypes.func.isRequired,
+  }),
+  disabled: PropTypes.bool,
+  errorMessage: PropTypes.string,
+  placeholder: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      defaultMessage: PropTypes.string.isRequired,
+    }),
+  ]),
+  className: PropTypes.string,
+  value: PropTypes.string,
+  onChange: PropTypes.func,
+  showTimeSelect: PropTypes.bool,
+  hideErrorMessageWrapper: PropTypes.bool,
+  customDateFormat: PropTypes.string,
+  focusProps: PropTypes.shape({
+    fieldIndex: PropTypes.string,
+    fieldId: PropTypes.string,
+    rowIndex: PropTypes.string,
+    columnId: PropTypes.string,
+  }),
+  onChangeRaw: PropTypes.func,
+  clearable: PropTypes.bool,
+  wrapperClassName: PropTypes.string,
+  customTooltip: PropTypes.bool,
+  showCustomInput: PropTypes.bool,
+  ariaLabel: PropTypes.shape({
+    id: PropTypes.string,
+    defaultMessage: PropTypes.string,
+  }),
+  hasErrors: PropTypes.bool,
+};
+
+DateFieldDateFns.defaultProps = {
+  tooltip: null,
+  required: false,
+  title: null,
+  button: null,
+  errorMessage: null,
+  disabled: false,
+  placeholder: '',
+  className: '',
+  wrapperClassName: '',
+  value: null,
+  onChange: () => {},
+  showTimeSelect: false,
+  hideErrorMessageWrapper: false,
+  customDateFormat: null,
+  focusProps: {},
+  onChangeRaw: null,
+  clearable: true,
+  customTooltip: false,
+  // If false, the 'x' icon for clearing the date will be hidden,
+  // but the date can still be cleared using Backspace.
+  // Thanks to this, the E2E tests won't fail and we won't need to
+  // write new getters for the datePicker in the E2E tests.
+  showCustomInput: true,
+  ariaLabel: null,
+  hasErrors: false,
+};

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9 http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
+
+	<!-- First create a db schema -->
+	<include file="install/changelog-create-tables.groovy"/>
+	<include file="install/changelog-add-unique-constraints.groovy"/>
+	<include file="install/changelog-create-indices.groovy"/>
+	<include file="install/changelog-add-foreign-key-constraints.groovy"/>
+
+	<!-- Disable foreign key checks in case data is not inserted in correct order -->
+	<include file="install/changelog-disable-foreign-key-checks.groovy"/>
+
+	<!-- Import system data (types, roles, etc)	-->
+	<include file="install/changelog-insert-system-data.groovy"/>
+	<!-- Import user data (location, users, etc) -->
+	<include file="install/changelog-insert-data.groovy"/>
+
+	<!-- Enable foreign key checks when done inserting data -->
+	<include file="install/changelog-enable-foreign-key-checks.groovy"/>
+
+</databaseChangeLog>

@@ -1,0 +1,256 @@
+import React, { useRef } from 'react';
+
+import { flexRender } from '@tanstack/react-table';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import PropTypes from 'prop-types';
+
+import TableRow from 'components/DataTable/TableRow';
+import DataTableStatus from 'components/DataTable/v2/DataTableStatus';
+import useTableColumnMeta from 'hooks/useTableColumnMeta';
+import useTranslate from 'hooks/useTranslate';
+import getCommonPinningStyles from 'utils/getCommonPinningStyles';
+import CustomTooltip from 'wrappers/CustomTooltip';
+
+// To enable row virtualization pass the `virtualize` config object:
+// virtualize: {
+//    enabled: true/false - ability to dynamically turn on/off virtualization
+//    minSize: number - minimum number of rows required to enable virtualization.
+//              Virtualization will be enabled only when enabled === true and dataLength >= minSize.
+//    estimateSize: number - this value is required even if the customRowsHeight is
+//                   set to true. The value should be set to the average height of the
+//                   row to ensure that any issues won't be seen before attaching the
+//                   ResizeObserver to the browser.
+//    overscan: number - the number of items to render above and below the visible area.
+//                       Increasing this number will increase the amount of time it takes
+//                       to render the virtualizer, but might decrease the likelihood of seeing
+//                       slow-rendering blank items
+//    customRowsHeight: true/false - if true, the height of rows will be recalculated
+//                      while scrolling, it has worse performance than hardcoded
+//                      row height
+// }
+const DataTableBody = ({
+  emptyTableMessage,
+  loadingMessage,
+  defaultLoadingTableMessage,
+  defaultEmptyTableMessage,
+  loading,
+  rowModel,
+  dataLength,
+  tableWidth,
+  tableWithPinnedColumns,
+  isScreenWiderThanTable,
+  virtualize,
+  arrowNavigationEnabledForAllFields,
+}) => {
+  const translate = useTranslate();
+  const parentRef = useRef(null);
+  const {
+    enabled,
+    minSize,
+    estimateSize,
+    overscan,
+    customRowsHeight: isCustomRowsHeightEnabled,
+  } = virtualize;
+
+  const isVirtualizationEnabled = enabled && dataLength >= minSize;
+
+  const rowVirtualizer = useVirtualizer({
+    count: rowModel?.rows?.length,
+    // With pinned columns the scroll for both axes lives on `.rt-table`, so the virtualizer must
+    // measure that element to work correctly. Otherwise, the body scrolls itself.
+    getScrollElement: () => (tableWithPinnedColumns
+      ? parentRef.current?.closest('.rt-table')
+      : parentRef.current),
+    estimateSize: () => estimateSize,
+    overscan,
+    enabled: isVirtualizationEnabled,
+  });
+
+  const getCellContent = (cell, isSeparator) => {
+    if (isSeparator) {
+      const { renderSeparator } = cell.column.columnDef.meta || {};
+      return renderSeparator ? flexRender(renderSeparator, cell.getContext()) : null;
+    }
+    return flexRender(cell.column.columnDef.cell, cell.getContext());
+  };
+
+  const dataToMap = isVirtualizationEnabled
+    ? rowVirtualizer.getVirtualItems()
+    : rowModel.rows;
+
+  // Virtualized rows are absolutely positioned, so they don't expand a `fit-content` body and it
+  // collapses. Use the explicit table width in that case.
+  const horizontalScrollWidth = isVirtualizationEnabled ? `${tableWidth}px` : 'fit-content';
+
+  return (
+    <div
+      ref={parentRef}
+      className="rt-tbody-v2"
+      style={{
+        width: (!isScreenWiderThanTable && tableWithPinnedColumns && dataLength && !loading)
+          ? horizontalScrollWidth
+          : undefined,
+      }}
+    >
+      <DataTableStatus
+        label={emptyTableMessage?.id || defaultEmptyTableMessage.id}
+        defaultMessage={emptyTableMessage?.defaultMessage
+          || defaultEmptyTableMessage.defaultMessage}
+        shouldDisplay={!dataLength && !loading}
+      />
+      <DataTableStatus
+        label={loadingMessage?.id || defaultLoadingTableMessage.id}
+        defaultMessage={loadingMessage?.defaultMessage || defaultLoadingTableMessage.defaultMessage}
+        shouldDisplay={loading}
+      />
+      {dataLength > 0 && !loading && (
+        <div
+          style={{
+            height: isVirtualizationEnabled ? `${rowVirtualizer.getTotalSize()}px` : 'auto',
+            width: '100%',
+            position: isVirtualizationEnabled ? 'relative' : 'static',
+          }}
+        >
+          {dataToMap.map((row) => {
+            const rowProps = isVirtualizationEnabled
+              ? {
+                'data-index': row.index,
+                ref: isCustomRowsHeightEnabled
+                  ? rowVirtualizer.measureElement
+                  : null,
+                style: {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  transform: `translateY(${row.start}px)`,
+                  width: '100%',
+                  height: `${row.size}px`,
+                },
+              } : {};
+            const rowData = isVirtualizationEnabled
+              ? rowModel.rows[row.index]
+              : row;
+            const { isRowDisabled, label, defaultMessage } = rowData.original?.meta || {
+              isRowDisabled: false,
+              label: '',
+              defaultMessage: '',
+            };
+            // Separator row: cells render column meta.renderSeparator instead of the normal cell.
+            const isSeparator = rowData.original?.isSeparator;
+            // Merge with the row below by removing the separating border. A collapsed row
+            // never merges, since its sub-rows (the rows it would merge with) are hidden.
+            const isCollapsed = rowData.subRows?.length > 0 && !rowData.getIsExpanded();
+            const mergeWithNextRow = rowData.original?.mergeWithNextRow && !isCollapsed;
+            const isLastSubRow = rowData.original?.isLastSubRow;
+            return (
+              <CustomTooltip
+                key={rowData.id}
+                content={isRowDisabled && translate(label, defaultMessage)}
+                show={isRowDisabled}
+              >
+                <div
+                  className={`rt-tr-group cell-wrapper ${rowData.original?.className || ''} ${mergeWithNextRow ? 'rt-tr-group-merged' : ''} ${isLastSubRow ? 'rt-tr-group-last-subrow' : ''}`}
+                  role="rowgroup"
+                  {...rowProps}
+                >
+                  <TableRow key={rowData.id} className={`rt-tr ${isRowDisabled ? 'bg-light disabled' : ''} ${isSeparator ? 'rt-tr-separator' : ''} ${rowData.depth > 0 ? 'rt-tr-subrow' : ''}`}>
+                    {rowData.getVisibleCells().map((cell) => {
+                      const {
+                        hide,
+                        flexWidth,
+                        className,
+                        arrowNavigable,
+                      } = useTableColumnMeta(cell.column);
+                      if (hide) {
+                        return null;
+                      }
+                      const cellContent = getCellContent(cell, isSeparator);
+                      return (
+                        <div
+                          data-column-id={cell.column.id}
+                          data-arrow-navigation={
+                            arrowNavigationEnabledForAllFields
+                            || arrowNavigable
+                            || undefined
+                          }
+                          className={`d-flex ${className} ${isRowDisabled && 'text-muted'}`}
+                          style={{
+                            ...getCommonPinningStyles(
+                              cell.column,
+                              flexWidth,
+                              isScreenWiderThanTable,
+                              dataLength,
+                              loading,
+                              isRowDisabled,
+                            ),
+                          }}
+                          key={cell.id}
+                        >
+                          {cellContent}
+                        </div>
+                      );
+                    })}
+                  </TableRow>
+                </div>
+              </CustomTooltip>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DataTableBody;
+
+DataTableBody.propTypes = {
+  emptyTableMessage: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+  }),
+  loadingMessage: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+  }),
+  defaultLoadingTableMessage: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+  }).isRequired,
+  defaultEmptyTableMessage: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+  }).isRequired,
+  loading: PropTypes.bool,
+  rowModel: PropTypes.shape({
+    rows: PropTypes.arrayOf(
+      PropTypes.shape({}),
+    ).isRequired,
+  }).isRequired,
+  dataLength: PropTypes.number.isRequired,
+  tableWidth: PropTypes.number.isRequired,
+  tableWithPinnedColumns: PropTypes.bool,
+  isScreenWiderThanTable: PropTypes.bool.isRequired,
+  virtualize: PropTypes.shape({
+    enabled: PropTypes.bool,
+    minSize: PropTypes.number,
+    estimateSize: PropTypes.number,
+    overscan: PropTypes.number,
+    customRowsHeight: PropTypes.bool,
+  }),
+  arrowNavigationEnabledForAllFields: PropTypes.bool,
+};
+
+DataTableBody.defaultProps = {
+  emptyTableMessage: null,
+  loadingMessage: null,
+  loading: false,
+  tableWithPinnedColumns: false,
+  arrowNavigationEnabledForAllFields: false,
+  virtualize: {
+    enabled: false,
+    minSize: 20,
+    estimateSize: 50,
+    overscan: 10,
+    customRowsHeight: false,
+  },
+};

@@ -1,0 +1,107 @@
+<div class="dialog">
+    <p class="message m-2">
+        <warehouse:message code="product.mergeProducts.description.label"/>
+    </p>
+    <g:if test="${locationsWithPendingTransactions}">
+        <div class="warning m-2">
+            <g:message code="product.mergeProducts.pendingTransactions.warning.label"/>
+            <g:each var="location" in="${locationsWithPendingTransactions}">
+                <div class="ml-2 pt-1">
+                    <img src="${resource(dir:'images/icons/silk',file: 'arrow_right.png')}" style="vertical-align: middle"/>
+                    <b>${location.name}</b>
+                </div>
+            </g:each>
+        </div>
+    </g:if>
+    <table>
+        <tbody>
+            <tr class="prop">
+                <td valign="top" class="name">
+                    <label for="primary-product">
+                        <warehouse:message code="product.mergeProducts.primaryProduct.label"/>
+                    </label>
+                </td>
+                <td valign="top" class="value">
+                    <g:autoSuggest
+                       id="primary-product"
+                       name="primary-product"
+                       jsonUrl="${request.contextPath}/json/findProductByName?skipQuantity=true"
+                       styleClass="text"
+                       showColor="true"
+                       valueId="${primaryProduct.id}"
+                       valueName="${primaryProduct.productCode} ${primaryProduct.name}"
+                    />
+                </td>
+            </tr>
+            <tr class="prop">
+                <td valign="top" class="name">
+                    <label for="obsolete-product">
+                        <warehouse:message code="product.mergeProducts.obsoleteProduct.label"/>
+                    </label>
+                </td>
+                <td valign="top" class="value">
+                    <g:autoSuggest
+                        id="obsolete-product"
+                        name="obsolete-product"
+                        jsonUrl="${request.contextPath}/json/findProductByName?skipQuantity=true"
+                        styleClass="text"
+                        showColor="true"
+                    />
+                </td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr class="prop">
+                <td></td>
+                <td valign="top" class="value">
+                    <button
+                        id="merge-button"
+                        type="button"
+                        class="button icon approve"
+                    >
+                        <g:message code="product.mergeProducts.label" default="Merge Products"/>
+                    </button>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+    <g:render template="/product/mergeProductConfirmationDialog" />
+</div>
+<script type="text/javascript">
+  $(function() {
+   $("#merge-button")
+     .click(function () {
+       const primaryProductId = $("#primary-product-id").val();
+       const obsoleteProductId = $("#obsolete-product-id").val();
+
+       // because format is "<product code> <product name>" here
+       const primaryProductCode = $("#primary-product-suggest").val().split(" ")[0];
+       const obsoleteProductCode = $("#obsolete-product-suggest").val().split(" ")[0];
+
+       const errors = {
+         "primary-product": null,
+         "obsolete-product": null,
+       }
+       if (!primaryProductId) errors["primary-product"] = "Primary product must be selected";
+       if (!obsoleteProductId) errors["obsolete-product"] = "Obsolete product must be selected";
+       if (primaryProductId === obsoleteProductId) errors["obsolete-product"] = "Can't merge same product - please choose a different product";
+
+       if (Object.values(errors).every(err => !err)) {
+         const template = $("#merge-product-warning-message").data("template");
+         const warningMessage = template
+           .replaceAll("{0}", primaryProductCode)
+           .replaceAll("{1}", obsoleteProductCode);
+         $("#merge-product-warning-message").text(warningMessage)
+
+         $('#merge-product-confirmation-dialog')
+           .data('primaryProduct', primaryProductId)
+           .data('obsoleteProduct', obsoleteProductId)
+           .dialog('open')
+       } else {
+         Object.entries(errors).forEach(([key, value]) => {
+           if (value) $("#" + key + "-suggest").notify(value)
+         })
+       }
+     })
+  });
+</script>

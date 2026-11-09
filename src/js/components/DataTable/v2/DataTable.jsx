@@ -1,0 +1,225 @@
+import React, { useRef } from 'react';
+
+import PropTypes from 'prop-types';
+
+import DataTableBody from 'components/DataTable/v2/DataTableBody';
+import DataTableFooter from 'components/DataTable/v2/DataTableFooter';
+import DataTableFooterRow from 'components/DataTable/v2/DataTableFooterRow';
+import DataTableHeader from 'components/DataTable/v2/DataTableHeader';
+import useDataTable from 'hooks/useDataTable';
+import useTableArrowNavigation from 'hooks/useTableArrowNavigation';
+import useTableScrollToEnd from 'hooks/useTableScrollToEnd';
+import useTableTopScrollbar from 'hooks/useTableTopScrollbar';
+import useWindowWidthCheck from 'hooks/useWindowWidthCheck';
+
+import 'react-table/react-table.css';
+import 'components/DataTable/DataTable.scss';
+
+// To enable row virtualization pass the `virtualize` config object:
+// virtualize: {
+//    enabled: true/false - ability to dynamically turn on/off virtualization
+//    minSize: number - minimum number of rows required to enable virtualization.
+//              Virtualization will be enabled only when enabled === true and dataLength >= minSize.
+//    estimateSize: number - this value is required even if the customRowsHeight is
+//                   set to true. The value should be set to the average height of the
+//                   row to ensure that any issues won't be seen before attaching the
+//                   ResizeObserver to the browser.
+//    overscan: number - the number of items to render above and below the visible area.
+//                       Increasing this number will increase the amount of time it takes
+//                       to render the virtualizer, but might decrease the likelihood of seeing
+//                       slow-rendering blank items
+//    customRowsHeight: true/false - if true, the height of rows will be recalculated
+//                      while scrolling, it has worse performance than hardcoded
+//                      row height
+// }
+const DataTable = ({
+  columns,
+  data,
+  footerComponent,
+  loading,
+  loadingMessage,
+  emptyTableMessage,
+  totalCount,
+  filterParams,
+  paginationProps,
+  disablePagination,
+  defaultColumn,
+  meta,
+  tableWithPinnedColumns,
+  virtualize,
+  overflowVisible,
+  showFooter,
+  disabled,
+  getSubRows,
+  defaultExpandedSubRows,
+  arrowNavigationSettings,
+  initialHorizontalScroll,
+  showTopScrollbar,
+}) => {
+  const bottomScrollbarRef = useRef(null);
+  const hasRows = Boolean(data?.length) && !loading;
+
+  const { enabledForAllFields, verticalOnly, onNavigatePastLastField } = arrowNavigationSettings;
+  // Arrow key navigation. With no cell marked as navigable, the listener does nothing.
+  const arrowNavigationRef = useTableArrowNavigation({ onNavigatePastLastField, verticalOnly });
+  const {
+    defaultEmptyTableMessage,
+    defaultLoadingTableMessage,
+    table,
+  } = useDataTable({
+    defaultColumn,
+    meta,
+    columns,
+    data,
+    totalCount,
+    filterParams,
+    getSubRows,
+    defaultExpandedSubRows,
+  });
+
+  const shouldDisplayPagination = Boolean(data?.length && !loading) && !disablePagination;
+
+  const tableWidth = table.getTotalSize();
+  const isScreenWiderThanTable = useWindowWidthCheck(tableWidth);
+
+  useTableScrollToEnd({
+    bottomScrollbarRef, initialHorizontalScroll, hasRows, tableWidth,
+  });
+
+  const topScrollbarRef = useTableTopScrollbar({
+    bottomScrollbarRef,
+    showTopScrollbar,
+    hasRows,
+    tableWidth,
+    isScreenWiderThanTable,
+  });
+
+  return (
+    <div className="app-react-table-wrapper table-v2" ref={arrowNavigationRef}>
+      <div className={`ReactTable app-react-table ${disabled ? 'app-react-table--disabled' : ''}`}>
+        {showTopScrollbar && <div className="rt-top-scrollbar" ref={topScrollbarRef} />}
+        <div ref={bottomScrollbarRef} className={`rt-table ${overflowVisible ? 'overflow-visible' : ''}`} role="grid">
+          <DataTableHeader
+            headerGroups={table.getHeaderGroups()}
+            tableWithPinnedColumns={tableWithPinnedColumns}
+            isScreenWiderThanTable={isScreenWiderThanTable}
+            emptyTableMessage={emptyTableMessage}
+          />
+          <DataTableBody
+            virtualize={virtualize}
+            emptyTableMessage={emptyTableMessage}
+            loadingMessage={loadingMessage}
+            defaultLoadingTableMessage={defaultLoadingTableMessage}
+            defaultEmptyTableMessage={defaultEmptyTableMessage}
+            loading={loading}
+            rowModel={table.getRowModel()}
+            dataLength={totalCount}
+            tableWidth={tableWidth}
+            tableWithPinnedColumns={tableWithPinnedColumns}
+            isScreenWiderThanTable={isScreenWiderThanTable}
+            overflowVisible={overflowVisible}
+            arrowNavigationEnabledForAllFields={enabledForAllFields}
+          />
+          {showFooter && (
+            <DataTableFooterRow
+              footerGroups={table.getFooterGroups()}
+              tableWithPinnedColumns={tableWithPinnedColumns}
+              isScreenWiderThanTable={isScreenWiderThanTable}
+            />
+          )}
+        </div>
+        {shouldDisplayPagination && (
+          <DataTableFooter
+            footerComponent={footerComponent}
+            totalData={totalCount}
+            {...paginationProps}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DataTable;
+
+DataTable.propTypes = {
+  columns: PropTypes.arrayOf(
+    PropTypes.shape({}),
+  ).isRequired,
+  data: PropTypes.arrayOf(
+    PropTypes.shape({}),
+  ).isRequired,
+  footerComponent: PropTypes.func,
+  loading: PropTypes.bool,
+  loadingMessage: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+  }),
+  emptyTableMessage: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    defaultMessage: PropTypes.string.isRequired,
+  }),
+  totalCount: PropTypes.number,
+  filterParams: PropTypes.shape({}),
+  disablePagination: PropTypes.bool,
+  paginationProps: PropTypes.shape({}),
+  tableWithPinnedColumns: PropTypes.bool,
+  virtualize: PropTypes.shape({
+    enabled: PropTypes.bool,
+    minSize: PropTypes.number,
+    estimateSize: PropTypes.number,
+    overscan: PropTypes.number,
+    customRowsHeight: PropTypes.bool,
+  }),
+  overflowVisible: PropTypes.bool,
+  // Renders a footer row from each column's `footer` definition.
+  showFooter: PropTypes.bool,
+  // Add styles to the table to make it look disabled.
+  disabled: PropTypes.bool,
+  // Returns the sub rows of a data row, enabling row expansion.
+  getSubRows: PropTypes.func,
+  // Expands all expandable rows by default.
+  defaultExpandedSubRows: PropTypes.bool,
+  // Arrow key navigation between the fields of the table.
+  arrowNavigationSettings: PropTypes.shape({
+    // Takes every field the table renders. To take only some columns, leave it out and give each
+    // of those columns `meta: { arrowNavigable: true }` instead.
+    enabledForAllFields: PropTypes.bool,
+    // Limits the moves to up and down, leaving left and right to move the caret in the field.
+    verticalOnly: PropTypes.bool,
+    // Called with the column when arrow down or right leaves the last field of the table.
+    onNavigatePastLastField: PropTypes.func,
+  }),
+  // Where the horizontal scroll starts: on the left-most columns, or on the right-most ones.
+  initialHorizontalScroll: PropTypes.oneOf(['start', 'end']),
+  // Adds a second horizontal scrollbar under the header row, synced with the table's own one.
+  showTopScrollbar: PropTypes.bool,
+};
+
+DataTable.defaultProps = {
+  footerComponent: null,
+  loading: false,
+  loadingMessage: null,
+  emptyTableMessage: null,
+  paginationProps: {},
+  filterParams: {},
+  disablePagination: false,
+  totalCount: 0,
+  tableWithPinnedColumns: false,
+  virtualize: {
+    enabled: false,
+    minSize: 20,
+    estimateSize: 50,
+    overscan: 10,
+    customRowsHeight: false,
+  },
+  // it allows tooltips to overflow outside the table
+  overflowVisible: false,
+  showFooter: false,
+  disabled: false,
+  getSubRows: undefined,
+  defaultExpandedSubRows: false,
+  arrowNavigationSettings: {},
+  initialHorizontalScroll: 'start',
+  showTopScrollbar: false,
+};

@@ -1,0 +1,31 @@
+# For running the app with a bundled, containerized database
+services:
+    app:
+      extends: 
+        file: docker-compose-base.yml
+        service: app
+      depends_on: 
+        db:
+          condition: service_healthy
+
+    nginx:
+      extends: 
+        file: docker-compose-base.yml
+        service: nginx
+      depends_on:
+        - app
+
+    db:
+      image: mariadb:10
+      container_name: openboxes-db
+      environment:
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+        MYSQL_DATABASE: openboxes
+        MYSQL_USER: ${DATASOURCE_USERNAME:-openboxes}
+        MYSQL_PASSWORD: ${DATASOURCE_PASSWORD:-openboxes}
+      volumes:
+        - ./mysql/:/var/lib/mysql/
+      healthcheck:
+        test: mysqladmin ping -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+        timeout: 20s
+        retries: 5

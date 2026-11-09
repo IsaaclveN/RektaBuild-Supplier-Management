@@ -1,0 +1,31 @@
+package org.pih.warehouse.inventory
+
+import org.springframework.context.ApplicationEvent
+
+class RefreshInventoryCountEvent extends ApplicationEvent {
+
+    Inventory inventory
+    List<String> productIds
+    Date transactionDate
+    String transactionId
+    String transactionTypeId
+
+    Boolean isDelete
+
+    RefreshInventoryCountEvent(Transaction source) {
+        super(source)
+        this.inventory = source.inventory
+        this.productIds = source.associatedProducts
+        this.transactionDate = source.transactionDate
+        this.transactionId = source.id
+        this.transactionTypeId = source.transactionType?.id
+    }
+
+    RefreshInventoryCountEvent(Transaction source, boolean isDelete) {
+        super(source)
+        this.transactionId = source.id
+        // The transaction type decides which helper table the transaction was recorded in
+        this.transactionTypeId = source.transactionType?.id
+        this.isDelete = isDelete
+    }
+}

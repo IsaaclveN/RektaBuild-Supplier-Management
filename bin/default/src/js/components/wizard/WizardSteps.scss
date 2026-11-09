@@ -1,0 +1,66 @@
+.steps-main-box {
+  padding: 0 10px;
+  font-size: .8em;
+  background-color: #ffffff;
+  margin: 0.75rem 1.5rem 0;
+  box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.09);
+}
+
+.steps-inside-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  color: lightgrey;
+}
+
+.step-container {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  .circle {
+    padding: 8px;
+    height: 21px;
+    width: 21px;
+    border: 3px solid lightgrey;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ffffff;
+  }
+  .filled {
+    background-color: lightgrey;
+    border: none;
+  }
+
+  .step-name {
+    padding: 10px;
+    display: flex;
+  }
+  .line {
+    border: 1px solid lightgrey;
+    flex: 1;
+  }
+}
+
+.active {
+  color: black;
+  .circle {
+    border: 3px solid #4f87ce;
+    color: white;
+  }
+  .filled {
+    background-color: #4f87ce;
+  }
+}
+
+.step-container:not(:last-child) {
+  flex: 1;
+}
+
+.step-container:not(:last-child)::after {
+  flex: 1;
+  content: " ";
+  border-bottom: 2px solid lightgrey;
+}

@@ -1,0 +1,48 @@
+.cell-content {
+  color: var(--blue-primary);
+  cursor: pointer;
+}
+
+.modal-content {
+  width: auto !important;
+  min-width: 400px;
+  left: 50% !important;
+  transform: translate(-50%);
+
+  .default-preference-type {
+    background-color: var(--blue-100);
+    padding: 8px;
+    margin-bottom: 16px !important;
+  }
+
+  .preference-type-location {
+    font-weight: 400;
+    color: var(--gray-400);
+  }
+
+  .preference-type-modal-header {
+    font-size: 18px;
+  }
+
+  .preference-type-modal-list-container {
+    padding: 0 4px 0 4px;
+
+    .preference-type-modal-list {
+      overflow-y: auto;
+      max-height: 230px;
+
+      .preference-type-modal-list-element {
+        margin-bottom: 2px;
+
+        &:last-of-type {
+          margin-bottom: 0;
+        }
+      }
+    }
+
+    p {
+      font-size: 14px;
+      margin: 0;
+    }
+  }
+}

@@ -1,0 +1,446 @@
+import { isEqual, uniq } from 'lodash';
+import { getTranslate } from 'react-localize-redux';
+import { createSelector } from 'reselect';
+
+import { translateWithDefaultMessage } from 'utils/Translate';
+import { formatDate } from 'utils/translation-utils';
+
+/**
+ * SESSION SELECTORS
+ */
+export const getSession = (state) => state.session;
+
+export const getNotificationAutohideDelay = createSelector(
+  [getSession],
+  (session) => session.notificationAutohideDelay,
+);
+
+export const getMaxUploadFileSize = createSelector(
+  [getSession],
+  (session) => session.maxUploadFileSize,
+);
+
+// Cache for locations
+const locationCache = new Map();
+
+export const getCurrentLocation = createSelector(
+  [getSession],
+  (session) => {
+    const location = session.currentLocation;
+    if (!location?.id) {
+      return location;
+    }
+
+    if (!locationCache.has(location.id)) {
+      locationCache.set(location.id, location);
+    }
+
+    return locationCache.get(location.id);
+  },
+);
+
+export const getCurrentLocationId = createSelector(
+  [getCurrentLocation],
+  (currentLocation) => currentLocation?.id,
+);
+
+export const getCurrentLocationName = createSelector(
+  [getCurrentLocation],
+  (currentLocation) => currentLocation?.name,
+);
+
+export const getHasBinLocationSupport = createSelector(
+  [getCurrentLocation],
+  (location) => location?.hasBinLocationSupport,
+);
+
+export const getHasPartialReceivingSupport = createSelector(
+  [getCurrentLocation],
+  (location) => location?.hasPartialReceivingSupport,
+);
+
+export const getDefaultTranslationsFetched = createSelector(
+  [getSession],
+  (session) => session.fetchedTranslations.default,
+);
+
+export const getReceivingTranslationsFetched = createSelector(
+  [getSession],
+  (session) => session.fetchedTranslations.receiving,
+);
+
+export const getCurrentUser = createSelector(
+  [getSession],
+  (session) => session.user,
+);
+
+export const getCurrentUserId = createSelector(
+  [getCurrentUser],
+  (user) => user?.id,
+);
+
+export const getSearchConfig = createSelector(
+  [getSession],
+  (session) => session.searchConfig,
+);
+
+export const getDebounceTime = createSelector(
+  [getSearchConfig],
+  (config) => config.debounceTime,
+);
+
+export const getMinSearchLength = createSelector(
+  [getSearchConfig],
+  (config) => config.minSearchLength,
+);
+
+export const getBrowserConnectionTimeout = createSelector(
+  [getSession],
+  (session) => session.browserConnectionTimeout,
+);
+
+export const getCurrentLocale = createSelector(
+  [getSession],
+  (session) => session.activeLanguage,
+);
+
+export const getCurrentLocationSupportedActivities = createSelector(
+  [getCurrentLocation],
+  (location) => location?.supportedActivities,
+);
+
+export const getCycleCountMaxSelectedProducts = createSelector(
+  [getSession],
+  (session) => session.cycleCountMaxSelectedProducts,
+);
+
+export const getAutosaveBatchSize = createSelector(
+  [getSession],
+  (session) => session.autosaveBatchSize,
+);
+
+export const getAutosaveDebounceTime = createSelector(
+  [getSession],
+  (session) => session.autosaveDebounceTime,
+);
+
+export const getAutosaveMaxRetries = createSelector(
+  [getSession],
+  (session) => session.autosaveMaxRetries,
+);
+
+export const getAutosaveRetryDelay = createSelector(
+  [getSession],
+  (session) => session.autosaveRetryDelay,
+);
+
+export const getAutosaveMaxRetryDelay = createSelector(
+  [getSession],
+  (session) => session.autosaveMaxRetryDelay,
+);
+
+/**
+ * LOCALIZE & TRANSLATION
+ */
+export const getLocalize = (state) => state.localize;
+
+export const getLocaleCode = createSelector(
+  [getLocalize],
+  (localize) => localize.languages.find((lang) => lang.active)?.code,
+);
+
+export const getActiveLanguage = createSelector(
+  [getSession],
+  (session) => session.activeLanguage,
+);
+
+export const getSupportedLocales = createSelector(
+  [getSession],
+  (session) => session.supportedLocales,
+);
+
+// Cache for formatDate functions
+const formatDateCache = new Map();
+
+export const getFormatLocalizedDate = createSelector(
+  [getLocalize, getLocaleCode],
+  (localize, localeCode) => {
+    // Cache translation function when it's not available in map object or
+    // when there are new translations keys fetched
+    const translationKeysNumber = Object.keys(localize.translations).length;
+    if (
+      !formatDateCache.has(localeCode)
+      || translationKeysNumber !== formatDateCache.get(localeCode)?.translationsNumber
+    ) {
+      formatDateCache.set(
+        localeCode, {
+          fn: formatDate(localize),
+          translationKeysNumber,
+        },
+      );
+    }
+    return formatDateCache.get(localeCode).fn;
+  },
+);
+
+// Cache translate function
+const translateCache = new Map();
+
+export const getAppTranslate = createSelector(
+  [getLocalize, getLocaleCode],
+  (localize, localeCode) => {
+    if (!localeCode) {
+      return () => {};
+    }
+
+    // Cache translation function when it's not available in map object or
+    // when there are new translations keys fetched
+    const translationKeysNumber = Object.keys(localize.translations).length;
+    if (
+      !translateCache.has(localeCode)
+      || translationKeysNumber !== translateCache.get(localeCode)?.translationKeysNumber
+    ) {
+      translateCache.set(
+        localeCode, {
+          fn: translateWithDefaultMessage(getTranslate(localize)),
+          translationKeysNumber,
+        },
+      );
+    }
+
+    return translateCache.get(localeCode).fn;
+  },
+);
+
+/**
+ * USERS
+ */
+export const getUsers = (state) => state.users.data;
+
+/**
+ * CYCLE COUNT
+ */
+export const getCycleCount = (state) => state.cycleCount;
+
+export const getCycleCountReasonCodes = createSelector(
+  [getCycleCount],
+  (cycleCount) => cycleCount.reasonCodes,
+);
+
+export const getRequests = createSelector(
+  [getCycleCount],
+  (cycleCount) => cycleCount.requests,
+);
+
+export const getCycleCountRequestIds = createSelector(
+  [getRequests, getCurrentLocationId],
+  (requests, locationId) => requests?.[locationId] || [],
+);
+
+export const getCycleCountIds = createSelector(
+  [getCycleCount, getCurrentLocationId],
+  (cycleCount, locationId) => cycleCount.cycleCounts?.[locationId] || [],
+);
+
+export const getReasonCodes = createSelector(
+  [getCycleCount],
+  (cycleCount) => cycleCount.reasonCodes,
+);
+
+export const getBinLocations = createSelector(
+  [getCycleCount],
+  (cycleCount) => cycleCount.binLocations,
+);
+
+export const getCycleCountTranslations = createSelector(
+  [getSession],
+  (session) => session.fetchedTranslations.cycleCount,
+);
+
+/**
+ * LOT NUMBERS
+ */
+export const getLotNumbersWithExpiration = (state) =>
+  state.lotNumbers?.lotNumbersWithExpiration || {};
+
+export const getShipmentTypes = (state) => state.stockMovementCommon.shipmentTypes;
+
+export const getLotNumbersByProductId = (state, productId) =>
+  getLotNumbersWithExpiration(state)?.[productId] || [];
+
+/**
+ * COUNT WORKFLOW
+ */
+export const getCountWorkflow = (state) => state.countWorkflow;
+
+export const getCountWorkflowEntities = createSelector(
+  [getCountWorkflow],
+  (wf) => wf?.entities,
+);
+
+export const getCountWorkflowEntityIds = createSelector(
+  getCountWorkflowEntities,
+  (entities) => (entities ? Object.keys(entities) : []),
+);
+
+export const getCountWorkflowEntityById = createSelector(
+  getCountWorkflowEntities,
+  (_, cycleCountId) => cycleCountId,
+  (entities, id) => entities?.[id],
+);
+
+export const makeGetCycleCountItems = () =>
+  createSelector(
+    getCountWorkflowEntityById,
+    (entity) => entity?.cycleCountItems || [],
+  );
+
+export const makeGetCycleCountItem = () =>
+  createSelector(
+    makeGetCycleCountItems(),
+    (_, __, cycleCountItemId) => cycleCountItemId,
+    (items, cycleCountItemId) => items?.find((it) => it.id === cycleCountItemId),
+  );
+
+export const makeGetCycleCountDateCounted = () =>
+  createSelector(
+    (state) => state.countWorkflow?.dateCounted,
+    (_, cycleCountId) => cycleCountId,
+    (dates, id) => dates?.[id],
+  );
+
+export const makeGetCycleCountCountedBy = () =>
+  createSelector(
+    (state) => state.countWorkflow?.countedBy,
+    (_, cycleCountId) => cycleCountId,
+    (countedBy, id) => countedBy?.[id],
+  );
+
+export const getAllCycleCountProducts = createSelector(
+  [getCountWorkflowEntities],
+  (entities) => {
+    if (!entities) return [];
+    return uniq(
+      Object.values(entities)
+        .flatMap((cc) => cc?.cycleCountItems || [])
+        .map((item) => item.product?.id)
+        .filter(Boolean),
+    );
+  },
+  {
+    memoizeOptions: {
+      resultEqualityCheck: isEqual,
+    },
+  },
+);
+
+export const makeGetCycleCountProduct = () =>
+  createSelector(
+    makeGetCycleCountItems(),
+    (items) => items?.[0]?.product,
+  );
+
+export const makeGetCycleCountItemsTotalCount = () =>
+  createSelector(
+    makeGetCycleCountItems(),
+    (items) => (items ? items.length : 0),
+  );
+
+export const makeGetCycleCountItemIds = () =>
+  createSelector(
+    makeGetCycleCountItems(),
+    (items) => (Array.isArray(items) ? items.map((it) => it.id) : []),
+  );
+
+/**
+  FORM ERRORS
+ */
+export const getErrors = (state) => state.errors.errors;
+
+export const getIsFormSubmitted = (state) => state.errors.isFormSubmitted;
+
+/**
+ * CYCLE COUNT ERRORS
+ */
+export const makeGetErrorsForCycleCount = () =>
+  createSelector(
+    [getErrors, (_, cycleCountId) => cycleCountId],
+    (errors, cycleCountId) => errors?.[cycleCountId] || {},
+  );
+
+export const makeGetErrorsForCycleCountItem = () =>
+  createSelector(
+    makeGetErrorsForCycleCount(),
+    (_, __, itemIdx) => itemIdx,
+    (ccErrors, itemIdx) => ccErrors?.cycleCountItems?.[itemIdx] || {},
+  );
+
+export const makeGetErrorForField = () =>
+  createSelector(
+    makeGetErrorsForCycleCountItem(),
+    (_, __, ___, fieldName) => fieldName,
+    (itemErrors, fieldName) => itemErrors?.[fieldName]?._errors[0] || null,
+  );
+
+/**
+ * CONNECTION
+ */
+export const getOnline = (state) => state.connection.online;
+
+/**
+ * SPINNER
+ */
+export const getSpinner = (state) => state.spinner.show;
+
+/**
+ *
+ * CURRENCY
+ */
+export const getCurrencyCode = (state) => state.session.currencyCode;
+
+/**
+ * INBOUND
+ */
+export const getInboundHeaderInfo = (state) => state.inbound.headerInfo || [];
+
+export const getInboundHeaderStatus = (state) => state.inbound.headerStatus;
+
+/**
+ * PARTIAL RECEIVING
+ */
+export const getReceivingHeaderInfo = (state) => state.partialReceiving.headerInfo || [];
+
+export const getIsShipmentFromPurchaseOrder = (state) =>
+  state.partialReceiving.isShipmentFromPurchaseOrder;
+
+export const getReceivingShipmentNumber = (state) => state.partialReceiving.shipmentNumber;
+
+export const getReceivingShipmentDetails = (state) =>
+  state.partialReceiving.shipmentDetails || {};
+
+export const getReceivingBinLocations = (state) => state.partialReceiving.binLocations || [];
+
+export const getReceivingView = (state) => state.partialReceiving.view;
+
+// The column the receiving table is sorted by, shared by the receiving and the check step.
+// A null sort means the shipment order, which the backend applies by default.
+export const getReceivingSort = (state) => state.partialReceiving.sorting;
+
+export const getReceivingDateDelivered = (state, shipmentId) =>
+  state.partialReceiving.dateDeliveredByShipment?.[shipmentId] ?? null;
+
+export const getReceivingPutawayEnabled = (state, receiptId) =>
+  state.partialReceiving.putawayEnabledByReceipt?.[receiptId] ?? false;
+
+// The receiving bin generated for the shipment is named "<prefix>-<shipment number>",
+// where the prefix is configurable ("R" by default).
+export const getReceivingBin = createSelector(
+  getReceivingBinLocations,
+  getReceivingShipmentNumber,
+  (binLocations, shipmentNumber) => {
+    if (!shipmentNumber) {
+      return null;
+    }
+    return binLocations.find((bin) => bin.name.endsWith(`-${shipmentNumber}`)) ?? null;
+  },
+);

@@ -1,0 +1,172 @@
+/**
+ * Copyright (c) 2012 Partners In Health.  All rights reserved.
+ * The use and distribution terms for this software are covered by the
+ * Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+ * which can be found in the file epl-v10.html at the root of this distribution.
+ * By using this software in any fashion, you are agreeing to be bound by
+ * the terms of this license.
+ * You must not remove this notice, or any other, from this software.
+ **/
+package org.pih.warehouse.importer
+
+import grails.gorm.transactions.Transactional
+import org.apache.commons.lang.StringUtils
+import org.pih.warehouse.core.parser.BooleanParser
+import org.pih.warehouse.core.parser.EnumParser
+
+import org.pih.warehouse.core.Organization
+import org.pih.warehouse.core.PreferenceType
+import org.pih.warehouse.core.RatingTypeCode
+import org.pih.warehouse.core.RoleType
+import org.pih.warehouse.core.UnitOfMeasure
+import org.pih.warehouse.core.parser.ParserContext
+import org.pih.warehouse.data.ProductSupplierService
+import org.pih.warehouse.product.Product
+import org.pih.warehouse.product.ProductSupplier
+import util.ConfigHelper
+
+import org.pih.warehouse.product.ProductSupplierImportCommand
+
+@Transactional
+class ProductSupplierImportDataService implements ImportDataService {
+    ProductSupplierService productSupplierService
+
+    @Override
+    void validateData(ImportDataCommand command) {
+        log.info "Validate data " + command.filename
+        command.data.eachWithIndex { params, index ->
+            boolean productSupplierExists = params.id ? ProductSupplier.exists(params.id) : null
+            if (params.active && !(params.active instanceof Boolean)) {
+                command.errors.reject("Row ${index + 1}: Active field has to be either empty or a boolean value (true/false)")
+            }
+
+            if (!params.name) {
+                command.errors.reject("Row ${index + 1}: Product Source Name is required")
+            }
+
+            if (!params.productCode) {
+                command.errors.reject("Row ${index + 1}: Product Code is required")
+            } else if (params.productCode && !Product.findByProductCode(params.productCode)) {
+                command.errors.reject("Row ${index + 1}: Product with productCode ${params.productCode} does not exist")
+            }
+
+            if (!params.supplierName) {
+                command.errors.reject("Row ${index + 1}: Supplier Name is required")
+            }
+
+            Organization supplier = params.supplierName ? Organization.findByName(params.supplierName) : null
+
+            /**
+             *  Prevent from assigning an inactive supplier to a source that is about to become active or while creating a new source
+                "to become active" means that an existing source is active and we don't change it, or a source is inactive and we are activating it during the import
+                Allow assigning an inactive supplier to an inactive source (or to a source that is about to become inactive)
+             */
+            if (supplier && !supplier.active && (params.active || !productSupplierExists)) {
+                command.errors.reject("Row ${index + 1}: Supplier '${supplier.name}' is no longer active. Choose an active supplier")
+            }
+
+            if (params.supplierName && !supplier) {
+                command.errors.reject("Row ${index + 1}: Supplier with name '${params.supplierName}' does not exist")
+            }
+
+            if (params.manufacturerName) {
+                Organization manufacturer = Organization.findByName(params.manufacturerName)
+
+                if (!manufacturer) {
+                    command.errors.reject("Row ${index + 1}: Manufacturer with name '${params.manufacturerName}' does not exist")
+                }
+
+                if (manufacturer && !manufacturer.hasRoleType(RoleType.ROLE_MANUFACTURER)) {
+                    command.errors.reject("Row ${index + 1}: Organization '${params.manufacturerName}' is not a manufacturer")
+                }
+            }
+
+            if (params.ratingType && !EnumParser.parseString(params.ratingType as String, RatingTypeCode)) {
+                command.errors.reject("Row ${index + 1}: Rating Type with value '${params.ratingType}' does not exist")
+            }
+
+            if (params.globalPreferenceTypeName && !PreferenceType.findByName(params.globalPreferenceTypeName)) {
+                command.errors.reject("Row ${index + 1}: Preference Type with name '${params.globalPreferenceTypeName}' does not exist")
+            }
+
+            if (!params.defaultProductPackageUomCode) {
+                command.errors.reject("Row ${index + 1}: Default Package Type is required")
+            }
+
+            if (!params.defaultProductPackageQuantity) {
+                command.errors.reject("Row ${index + 1}: Default Package Size is required")
+            }
+
+            log.info("uomCode " + params.defaultProductPackageUomCode)
+            if (params.defaultProductPackageUomCode) {
+                def unitOfMeasure = UnitOfMeasure.findByCode(params.defaultProductPackageUomCode)
+                if (!unitOfMeasure) {
+                    command.errors.reject("Row ${index + 1}: Unit of measure ${params.defaultProductPackageUomCode} does not exist")
+                }
+                if (unitOfMeasure && !params.defaultProductPackageQuantity) {
+                    command.errors.reject("Row ${index + 1}: Unit of measure ${params.defaultProductPackageUomCode} requires a quantity")
+                }
+                if (unitOfMeasure && params.defaultProductPackageQuantity && params.defaultProductPackageQuantity % 1 != 0) {
+                    command.errors.reject("Row ${index + 1}: Unit of measure quntity must be a whole number")
+                }
+            }
+
+            Date minDate = ConfigHelper.getMinimumExpirationDate()
+            Date preferenceTypeValidityStartDate = params.globalPreferenceTypeValidityStartDate ?: null
+            if (preferenceTypeValidityStartDate && minDate > preferenceTypeValidityStartDate) {
+                command.errors.reject("Row ${index + 1}: Validity start date ${preferenceTypeValidityStartDate} is invalid. Please enter a date after ${minDate.getYear()+1900}.")
+            }
+
+            Date preferenceTypeValidityEndDate = params.globalPreferenceTypeValidityEndDate ?: null
+            if (preferenceTypeValidityEndDate && minDate > preferenceTypeValidityEndDate) {
+                command.errors.reject("Row ${index + 1}: Validity end date ${preferenceTypeValidityEndDate} is invalid. Please enter a date after ${minDate.getYear()+1900}.")
+            }
+
+            Date contractPriceValidUntil = params.contractPriceValidUntil ?: null
+            if (contractPriceValidUntil && minDate > contractPriceValidUntil) {
+                command.errors.reject("Row ${index + 1}: Contract Price Valid Until date ${contractPriceValidUntil} is invalid. Please enter a date after ${minDate.getYear()+1900}.")
+            }
+        }
+    }
+
+    @Override
+    void importData(ImportDataCommand command) {
+        log.info "Process data " + command.filename
+
+        command.data.each { params ->
+            // Sanitize the raw import data into a strongly-typed command object
+            ProductSupplierImportCommand productSupplierImportCommand = new ProductSupplierImportCommand(
+                    active: BooleanParser.parseString(params.active as String, new ParserContext<Boolean>(defaultValue: true)),
+                    id: sanitizeStringInput(params.id),
+                    code: sanitizeStringInput(params.code),
+                    name: sanitizeStringInput(params.name),
+                    productCode: sanitizeStringInput(params.productCode),
+                    productName: sanitizeStringInput(params.productName),
+                    legacyProductCode: sanitizeStringInput(params.legacyProductCode),
+                    supplierName: sanitizeStringInput(params.supplierName),
+                    supplierCode: sanitizeStringInput(params.supplierCode),
+                    manufacturerName: sanitizeStringInput(params.manufacturerName),
+                    manufacturerCode: sanitizeStringInput(params.manufacturerCode),
+                    minOrderQuantity: params.minOrderQuantity,
+                    contractPricePrice: params.contractPricePrice ? BigDecimal.valueOf(params.contractPricePrice as double) : null,
+                    contractPriceValidUntil: params.contractPriceValidUntil ?: null,
+                    ratingType: EnumParser.parseString(params.ratingType as String, RatingTypeCode),
+                    globalPreferenceTypeName: sanitizeStringInput(params.globalPreferenceTypeName),
+                    globalPreferenceTypeValidityStartDate: params.globalPreferenceTypeValidityStartDate ?: null,
+                    globalPreferenceTypeValidityEndDate: params.globalPreferenceTypeValidityEndDate ?: null,
+                    globalPreferenceTypeComments: sanitizeStringInput(params.globalPreferenceTypeComments),
+                    defaultProductPackageUomCode: sanitizeStringInput(params.defaultProductPackageUomCode),
+                    defaultProductPackageQuantity: params.defaultProductPackageQuantity,
+                    defaultProductPackagePrice: params.defaultProductPackagePrice ? BigDecimal.valueOf(params.defaultProductPackagePrice as double) : null,
+            )
+
+            ProductSupplier productSupplier = productSupplierService.createOrUpdate(productSupplierImportCommand)
+            productSupplier.save(failOnError: true)
+        }
+    }
+
+    private String sanitizeStringInput(Object field) {
+        String fieldString = field as String
+        return StringUtils.isBlank(fieldString) ? null : fieldString.trim()
+    }
+}

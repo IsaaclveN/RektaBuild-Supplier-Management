@@ -1,0 +1,69 @@
+name: Docker
+on:
+  # We want releases to be triggered automatically whenever we push a new tag that starts with "vX.Y.Z"
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+**'
+
+  # And let us trigger this manually if we ever need to.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag associated with the release
+        required: true
+        default: v0.0.0
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  TAG_NAME: ${{ (contains(github.ref, 'tag') && github.ref_name) || github.event.inputs.tag }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{env.TAG_NAME}}  # Needed for manual runs to ensure we build from the tagged commit
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 8
+          distribution: temurin
+          cache: gradle
+
+      - name: Build dependencies, project and prepare files for Docker build
+        run: ./gradlew prepareDocker -Dgrails.env=prod --console=plain
+          
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: build/docker/
+          file: build/docker/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

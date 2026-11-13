@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
   <a href="https://www.openboxes.com">
     <img src="/docs/assets/img/logo-full-rounded.png" alt="OpenBoxes logo">
@@ -78,3 +79,6 @@ This project is licensed under the [Eclipse Public License 1.0](https://opensour
 By using or contributing to this software in any fashion, you are agreeing to be bound by the terms of this license.
 
 You must not remove this licensing notice or any other notices from this software.
+=======
+# IT-Asset-Management
+>>>>>>> 59ce69d3761284916c7c658b2ccb37fc505be03e

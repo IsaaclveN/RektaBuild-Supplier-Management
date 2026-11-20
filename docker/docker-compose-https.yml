@@ -1,0 +1,27 @@
+services:
+    app:
+      ports: !reset []
+
+    nginx:
+      image: nginx:stable-alpine
+      ports:
+        - "443:443"
+      volumes:
+        - type: bind
+          source: ./nginx/conf.d-https
+          target: /etc/nginx/conf.d
+          read_only: true
+          bind:
+            create_host_path: false
+        - type: bind
+          source: /etc/letsencrypt
+          target: /etc/letsencrypt
+          read_only: true
+          bind:
+            create_host_path: false
+        - type: bind
+          source: /var/www/certbot
+          target: /var/www/certbot
+          read_only: true
+          bind:
+            create_host_path: false

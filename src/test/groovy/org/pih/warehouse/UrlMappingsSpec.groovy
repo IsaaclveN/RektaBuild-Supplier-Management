@@ -3,13 +3,15 @@ package org.pih.warehouse
 import grails.test.mixin.Mock
 import grails.test.mixin.TestFor
 import org.pih.warehouse.UrlMappings
+import org.pih.warehouse.api.ApiController
 import org.pih.warehouse.api.CategoryApiController
+import org.pih.warehouse.api.ProductApiController
 import org.pih.warehouse.api.StockMovementItemApiController
 import org.pih.warehouse.api.UserRoleApiController
 import spock.lang.Specification
 
 @TestFor(UrlMappings)
-@Mock([CategoryApiController, StockMovementItemApiController, UserRoleApiController])
+@Mock([ApiController, CategoryApiController, ProductApiController, StockMovementItemApiController, UserRoleApiController])
 class UrlMappingsSpec extends Specification {
     void "test forward mapping for GETs"() {
         when:
@@ -19,6 +21,8 @@ class UrlMappingsSpec extends Specification {
         // CATEGORIES
         assertForwardUrlMapping("/api/categories", controller: 'categoryApi', action: "list")
         assertForwardUrlMapping("/api/categories/123", controller: 'categoryApi', action: "read")
+        assertForwardUrlMapping("/api/health", controller: 'api', action: "health")
+        assertForwardUrlMapping("/api/integration/inventory/products", controller: 'productApi', action: "list")
         // STOCK MOVEMENT ITEMS
         assertForwardUrlMapping("/api/stockMovementItems", controller: 'stockMovementItemApi', action: "list")
         assertForwardUrlMapping("/api/stockMovementItems/123", controller: 'stockMovementItemApi', action: "read")

@@ -10,18 +10,20 @@ package org.pih.warehouse
  **/
 
 import org.pih.warehouse.auth.AuthService
+import grails.converters.JSON
 import org.pih.warehouse.core.Location
 import org.pih.warehouse.core.LocationStatus
 
 class SecurityInterceptor {
 
     static ArrayList controllersWithAuthUserNotRequired = ['test', 'errors']
-    static ArrayList actionsWithAuthUserNotRequired = ['status', 'test', 'login', 'logout', 'handleLogin', 'signup', 'handleSignup', 'json', 'updateAuthUserLocale', 'viewLogo', 'changeLocation', 'menu']
+    static ArrayList actionsWithAuthUserNotRequired = ['status', 'health', 'test', 'login', 'logout', 'handleLogin', 'signup', 'handleSignup', 'json', 'updateAuthUserLocale', 'viewLogo', 'changeLocation', 'menu']
 
     static ArrayList controllersWithLocationNotRequired = ['categoryApi', 'productApi', 'genericApi', 'api']
-    static ArrayList actionsWithLocationNotRequired = ['status', 'test', 'login', 'logout', 'handleLogin', 'signup', 'handleSignup', 'json', 'updateAuthUserLocale', 'viewLogo', 'chooseLocation', 'menu']
+    static ArrayList actionsWithLocationNotRequired = ['status', 'health', 'test', 'login', 'logout', 'handleLogin', 'signup', 'handleSignup', 'json', 'updateAuthUserLocale', 'viewLogo', 'chooseLocation', 'menu']
 
     def authService
+    def erpIntegrationAuthenticationService
 
     public SecurityInterceptor() {
         matchAll().except(uri: '/static/**').except(controller: "errors").except(uri: "/info").except(uri: "/health")
@@ -37,6 +39,41 @@ class SecurityInterceptor {
         // set user/warehouse, if present, or clear them if not
         authService.currentUser = session.user ?: null
         authService.currentLocation = session.warehouse ?: null
+
+        if (applicationRelativeRequestPath() == "/api/integration/inventory/products") {
+            if (!isSecureInventoryRequest()) {
+                response.status = 403
+                render([errorCode: 403, errorMessage: "HTTPS is required"] as JSON)
+                return false
+            }
+
+            int authenticationStatus = erpIntegrationAuthenticationService.authenticateInventoryRequest(
+                request.getHeader("Authorization")
+            )
+            if (authenticationStatus == 503) {
+                response.status = 503
+                render([errorCode: 503, errorMessage: "Service authentication is not configured"] as JSON)
+                return false
+            }
+            if (authenticationStatus != 200) {
+                response.status = 401
+                render([errorCode: 401, errorMessage: "Unauthorized"] as JSON)
+                return false
+            }
+
+            if (!prepareInventoryProductQuery()) {
+                return false
+            }
+
+            request.setAttribute("erp.integration.inventory.authenticated", true)
+            params.format = "inventoryIntegration"
+            params.includeInactive = false
+            Integer requestedMax = params.int("max")
+            Integer requestedOffset = params.int("offset")
+            params.max = Math.min(Math.max(requestedMax == null ? 50 : requestedMax, 1), 100)
+            params.offset = Math.max(requestedOffset == null ? 0 : requestedOffset, 0)
+            return true
+        }
 
         // This allows requests for the health monitoring endpoint to pass through without a user
         if (controllerName.equals("api") && actionName.equals("status")) {
@@ -125,6 +162,34 @@ class SecurityInterceptor {
             return false
         }
 
+        return true
+    }
+
+    private String applicationRelativeRequestPath() {
+        String path = request.forwardURI ?: request.requestURI
+        String contextPath = request.contextPath ?: ""
+        return contextPath && path.startsWith(contextPath) ? path.substring(contextPath.length()) : path
+    }
+
+    private boolean isSecureInventoryRequest() {
+        return request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"))
+    }
+
+    private boolean prepareInventoryProductQuery() {
+        Set<String> allowedParameters = ["q", "max", "offset"] as Set<String>
+        boolean hasUnsupportedParameter = request.parameterMap.keySet().any { !allowedParameters.contains(it) }
+        String maxValue = request.getParameter("max")
+        String offsetValue = request.getParameter("offset")
+        String query = request.getParameter("q")
+        boolean hasInvalidPaging = (maxValue && !(maxValue ==~ /\d{1,9}/)) ||
+                (offsetValue && !(offsetValue ==~ /\d{1,9}/))
+        boolean hasLongQuery = query && query.length() > 200
+
+        if (hasUnsupportedParameter || hasInvalidPaging || hasLongQuery) {
+            response.status = 400
+            render([errorCode: 400, errorMessage: "Invalid query parameters"] as JSON)
+            return false
+        }
         return true
     }
 }

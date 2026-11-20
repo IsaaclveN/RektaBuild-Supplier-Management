@@ -282,6 +282,10 @@ class ApiController {
         render([status: "OK", database: [status: databaseStatus, message: databaseStatusMessage ?: ""]] as JSON)
     }
 
+    def health() {
+        render([service: "OpenBoxes", status: "ok"] as JSON)
+    }
+
     def getRequestTypes() {
         def requestTypes = []
         Locale defaultLocale = new Locale(grailsApplication.config.openboxes.locale.defaultLocale ?: "en")

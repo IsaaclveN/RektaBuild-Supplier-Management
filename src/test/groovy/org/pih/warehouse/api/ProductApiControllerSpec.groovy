@@ -107,6 +107,30 @@ class ProductApiControllerSpec extends Specification implements DataTest, Contro
         numProductsInDB << [0, 1, 3]
     }
 
+    void "inventory integration list returns only catalog fields"() {
+        given:
+        Product product = new Product(
+                productCode: "INV-001",
+                name: "Inventory Product",
+                description: "Catalog item",
+                lotAndExpiryControl: true,
+                active: true
+        )
+        productServiceStub.getProducts(*_) >> constructPagedResultList([product])
+        params.format = "inventoryIntegration"
+
+        when:
+        controller.list()
+
+        then:
+        JSONObject json = getJsonObjectResponse(controller.response)
+        json.data[0].productCode == "INV-001"
+        json.data[0].name == "Inventory Product"
+        json.data[0].lotAndExpiryControl
+        !json.data[0].has("pricePerUnit")
+        !json.data[0].has("glAccount")
+    }
+
     void 'getAvailabilityInAllDepots should render the availability of the given product lots'() {
         given: 'the following db data'
         Product product = new Product().save(validate: false)

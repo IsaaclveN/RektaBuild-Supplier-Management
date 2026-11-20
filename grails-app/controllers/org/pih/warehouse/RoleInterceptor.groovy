@@ -108,6 +108,19 @@ class RoleInterceptor {
 
     boolean before() {
 
+        if (request.getAttribute("erp.integration.inventory.authenticated") == Boolean.TRUE) {
+            String path = request.forwardURI ?: request.requestURI
+            String contextPath = request.contextPath ?: ""
+            String applicationPath = contextPath && path.startsWith(contextPath) ? path.substring(contextPath.length()) : path
+            if (applicationPath == "/api/integration/inventory/products" &&
+                request.method == "GET" && controllerName == "productApi" && actionName == "list") {
+                return true
+            }
+            response.status = 403
+            render([errorCode: 403, errorMessage: "Forbidden"] as grails.converters.JSON)
+            return false
+        }
+
         def rules = grailsApplication.config.openboxes.security.rbac.rules
         def rule = rules.find { it.controller == controllerName && it.actions.contains(actionName) ||
             it.controller == controllerName && it.actions.contains("*") ||

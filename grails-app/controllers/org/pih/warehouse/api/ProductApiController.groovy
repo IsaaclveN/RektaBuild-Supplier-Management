@@ -71,6 +71,22 @@ class ProductApiController extends BaseDomainApiController {
 
         def products = productService.getProducts(categories, catalogs, tags, glAccounts, productFamilies, includeInactive, params)
 
+        if (params.format == 'inventoryIntegration') {
+            List<Map> inventoryProducts = products.collect { Product product ->
+                [
+                    id: product.id,
+                    productCode: product.productCode,
+                    name: product.name,
+                    description: product.description,
+                    unitOfMeasure: product.unitOfMeasure?.name,
+                    lotAndExpiryControl: product.lotAndExpiryControl,
+                    active: product.active
+                ]
+            }
+            render([data: inventoryProducts, totalCount: products?.totalCount] as JSON)
+            return
+        }
+
         if (params.format == 'csv') {
             boolean includeAttributes = params.boolean("includeAttributes") ?: false
             def csv = productService.exportProducts(products, includeAttributes)

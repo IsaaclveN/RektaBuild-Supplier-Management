@@ -42,6 +42,11 @@ class UrlMappings {
 
         // REST APIs with complex resource names or subresources
 
+        "/api/integration/inventory/products"(parseRequest: true) {
+            controller = { "productApi" }
+            action = [GET: "list"]
+        }
+
         "/api/categories"(parseRequest: true) {
             controller = { "categoryApi" }
             action = [GET: "list", POST: "save"]
@@ -1043,6 +1048,11 @@ class UrlMappings {
 
 
         // Anonymous REST APIs like Status, Login, Logout
+
+        "/api/health" {
+            controller = "api"
+            action = [GET: "health"]
+        }
 
         "/api/$action/$id?"(controller: "api", parseRequest: false) {
             //action = [GET:"show", PUT:"update", DELETE:"delete", POST:"save"]

@@ -1,6 +1,6 @@
 services:
     app:
-      image: openboxes-local:latest
+      image: ${OPENBOXES_IMAGE:-${OB_IMAGE_REPOSITORY:-ghcr.io/}openboxes/openboxes:${OB_VERSION:-latest}}
       container_name: openboxes-app
       expose:
         - "8080"

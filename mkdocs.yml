@@ -361,6 +361,8 @@ nav:
   - API Guide:
     - Getting Started: api-guide/getting-started.md
     - Authentication: api-guide/authentication.md
+    - ERP Integration: api-guide/erp-integration.md
+    - ERP API Inventory: api-guide/erp-api-inventory.md
     - Pagination: api-guide/pagination.md
     - Filtering: api-guide/lookup.md
     - Formatting: api-guide/formatting.md

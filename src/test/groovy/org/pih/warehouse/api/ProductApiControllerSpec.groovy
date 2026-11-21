@@ -113,6 +113,7 @@ class ProductApiControllerSpec extends Specification implements DataTest, Contro
                 productCode: "INV-001",
                 name: "Inventory Product",
                 description: "Catalog item",
+                unitOfMeasure: "Each",
                 lotAndExpiryControl: true,
                 active: true
         )
@@ -126,6 +127,7 @@ class ProductApiControllerSpec extends Specification implements DataTest, Contro
         JSONObject json = getJsonObjectResponse(controller.response)
         json.data[0].productCode == "INV-001"
         json.data[0].name == "Inventory Product"
+        json.data[0].unitOfMeasure == "Each"
         json.data[0].lotAndExpiryControl
         !json.data[0].has("pricePerUnit")
         !json.data[0].has("glAccount")

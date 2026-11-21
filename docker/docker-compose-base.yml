@@ -1,6 +1,8 @@
 services:
     app:
       image: ${OPENBOXES_IMAGE:-${OB_IMAGE_REPOSITORY:-ghcr.io/}openboxes/openboxes:${OB_VERSION:-latest}}
+      build:
+        context: ../build/docker
       container_name: openboxes-app
       expose:
         - "8080"
@@ -12,6 +14,7 @@ services:
         DATASOURCE_URL: ${DATASOURCE_URL:-jdbc:mysql://db/openboxes?serverTimezone=UTC&useSSL=false}
         GRAILS_SERVER_URL: ${GRAILS_SERVER_URL:-http://localhost:8080/openboxes/}
         JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms1024m -Xmx1024m -XX:+UseParallelGC -Djava.awt.headless=true}
+        INVENTORY_TO_SUPPLY_TOKEN: ${INVENTORY_TO_SUPPLY_TOKEN}
       healthcheck:
         test: "curl --fail --silent localhost:8080/openboxes/health | grep UP || exit 1"
         interval: 10s

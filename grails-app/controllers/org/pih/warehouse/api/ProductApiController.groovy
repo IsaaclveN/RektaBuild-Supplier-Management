@@ -78,7 +78,7 @@ class ProductApiController extends BaseDomainApiController {
                     productCode: product.productCode,
                     name: product.name,
                     description: product.description,
-                    unitOfMeasure: product.unitOfMeasure?.name,
+                    unitOfMeasure: product.unitOfMeasure,
                     lotAndExpiryControl: product.lotAndExpiryControl,
                     active: product.active
                 ]

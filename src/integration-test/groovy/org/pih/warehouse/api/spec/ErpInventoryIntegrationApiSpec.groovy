@@ -51,9 +51,56 @@ class ErpInventoryIntegrationApiSpec extends ApiSpec {
 
         then:
         response.statusCode() == 200
+        response.jsonPath().getList("data") != null
         response.jsonPath().getInt("totalCount") >= 1
         response.jsonPath().getList("data").size() <= 100
         response.jsonPath().getString("data[0].productCode") != null
+    }
+
+    void "inventory product endpoint filters and paginates results"() {
+        when: "querying the known test product"
+        def response = RestAssured.given()
+                .header("Authorization", "Bearer integration-test-token")
+                .header("X-Forwarded-Proto", "https")
+                .accept(ContentType.JSON)
+                .queryParam("q", product.productCode)
+                .queryParam("max", 1)
+                .get("/integration/inventory/products")
+
+        then:
+        response.statusCode() == 200
+        response.jsonPath().getInt("totalCount") == 1
+        response.jsonPath().getList("data").size() == 1
+        response.jsonPath().getString("data[0].productCode") == product.productCode
+
+        when: "requesting the next page"
+        def nextPage = RestAssured.given()
+                .header("Authorization", "Bearer integration-test-token")
+                .header("X-Forwarded-Proto", "https")
+                .accept(ContentType.JSON)
+                .queryParam("q", product.productCode)
+                .queryParam("max", 1)
+                .queryParam("offset", 1)
+                .get("/integration/inventory/products")
+
+        then:
+        nextPage.statusCode() == 200
+        nextPage.jsonPath().getInt("totalCount") == 1
+        nextPage.jsonPath().getList("data").isEmpty()
+    }
+
+    void "inventory product endpoint rejects a search query longer than 200 characters"() {
+        when:
+        def response = RestAssured.given()
+                .header("Authorization", "Bearer integration-test-token")
+                .header("X-Forwarded-Proto", "https")
+                .accept(ContentType.JSON)
+                .queryParam("q", "x" * 201)
+                .get("/integration/inventory/products")
+
+        then:
+        response.statusCode() == 400
+        response.jsonPath().getInt("errorCode") == 400
     }
 
     void "inventory product endpoint rejects a missing bearer token"() {

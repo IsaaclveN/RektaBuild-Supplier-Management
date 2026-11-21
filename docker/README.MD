@@ -13,6 +13,14 @@ We provide the following compose files for running the application under differe
 The following outlines how to run a containerized instance of OpenBoxes.
 
 These compose files support running against officially released OpenBoxes images and locally built ones. See the community guide for [instructions on creating your own Docker image of the application](https://openboxes.gitbook.io/contributor-guide/release-planning/creating-a-new-docker-image).
+From the repository root, build the application image from this checkout by preparing the WAR and then building the Compose app service:
+
+```sh
+bash ./gradlew prepareDocker -Dgrails.env=prod --console=plain
+docker compose -f ./docker/docker-compose.yml build app
+```
+
+For HTTPS deployments, include `-f ./docker/docker-compose-https.yml` in Compose commands. Compose uses the image name configured by `OPENBOXES_IMAGE` (or its default) for the locally built image. Re-run the build after changing application source before starting the service.
 
 ### Prerequisites
 1. Install [Docker](https://docs.docker.com/) and [Docker Compose](https://docs.docker.com/compose/) (we support Docker Engine v24 or later)

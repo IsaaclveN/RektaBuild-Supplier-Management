@@ -14,4 +14,5 @@ services:
         file: docker-compose-base.yml
         service: nginx
       depends_on:
-          - app
+        app:
+          condition: service_healthy

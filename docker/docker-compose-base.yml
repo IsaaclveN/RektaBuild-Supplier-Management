@@ -1,6 +1,6 @@
 services:
     app:
-      image: ${OPENBOXES_IMAGE:-${OB_IMAGE_REPOSITORY:-ghcr.io/}openboxes/openboxes:${OB_VERSION:-latest}}
+      image: ${OPENBOXES_IMAGE:-rektabuild/supplier-openboxes:local}
       build:
         context: ../build/docker
       container_name: openboxes-app
@@ -14,13 +14,18 @@ services:
         DATASOURCE_URL: ${DATASOURCE_URL:-jdbc:mysql://db/openboxes?serverTimezone=UTC&useSSL=false}
         GRAILS_SERVER_URL: ${GRAILS_SERVER_URL:-http://localhost:8080/openboxes/}
         JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms1024m -Xmx1024m -XX:+UseParallelGC -Djava.awt.headless=true}
-        INVENTORY_TO_SUPPLY_TOKEN: ${INVENTORY_TO_SUPPLY_TOKEN}
+        INVENTORY_TO_SUPPLY_TOKEN: ${INVENTORY_TO_SUPPLY_TOKEN:?Set INVENTORY_TO_SUPPLY_TOKEN in the Compose env file}
       healthcheck:
-        test: "curl --fail --silent localhost:8080/openboxes/health | grep UP || exit 1"
+        test:
+          - CMD-SHELL
+          - >-
+            curl --fail --silent --show-error --max-time 8
+            http://127.0.0.1:8080/openboxes/health
+            | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'
         interval: 10s
-        timeout: 5s
-        retries: 5
-        start_period: 30s
+        timeout: 10s
+        retries: 12
+        start_period: 120s
 
     nginx:
       image: nginx:1.13

@@ -51,3 +51,4 @@ docker/openboxes.war
 .claude
 .~*#
 .envrc
+.env
